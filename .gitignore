@@ -26,3 +26,6 @@ logs
 
 # Local tooling / agent settings
 .claude/
+
+# Private, local-only templates (never open-sourced)
+app/data/*.local.ts

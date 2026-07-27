@@ -12,8 +12,7 @@ export interface CoverTemplate {
 }
 
 // The open-source build ships with a single blank canvas.
-// Add your own presets by pushing more entries onto this array.
-export const COVER_TEMPLATES: CoverTemplate[] = [
+const BASE_TEMPLATES: CoverTemplate[] = [
   {
     id: 'blank',
     name: '空白画布',
@@ -28,3 +27,16 @@ export const COVER_TEMPLATES: CoverTemplate[] = [
     elements: [],
   },
 ]
+
+// Optional private templates for LOCAL DEVELOPMENT only.
+// Put them in a git-ignored `app/data/templates.local.ts` that exports
+// `LOCAL_TEMPLATES: CoverTemplate[]`. `import.meta.glob` resolves to an empty
+// object when that file is absent, so a fresh clone still builds without it and
+// the private templates never end up in the open-source repo.
+const localModules = import.meta.glob('./templates.local.ts', { eager: true }) as Record<
+  string,
+  { LOCAL_TEMPLATES?: CoverTemplate[] }
+>
+const LOCAL_TEMPLATES = Object.values(localModules).flatMap((m) => m.LOCAL_TEMPLATES ?? [])
+
+export const COVER_TEMPLATES: CoverTemplate[] = [...BASE_TEMPLATES, ...LOCAL_TEMPLATES]
