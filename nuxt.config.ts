@@ -3,6 +3,7 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   ssr: false, // pure SPA — this is a client-side design editor
   devtools: { enabled: true },
+  devServer: { port: 3009 },
   modules: ['@pinia/nuxt', '@nuxt/icon'],
   icon: { mode: 'svg', size: '1em' },
   css: ['~/assets/css/main.css'],
@@ -18,6 +19,24 @@ export default defineNuxtConfig({
           href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Noto+Serif+SC:wght@400;600;700;900&family=Poppins:wght@400;600;800&family=Playfair+Display:wght@500;700;900&family=Bebas+Neue&family=Pacifico&family=Roboto+Mono:wght@400;700&display=swap',
         },
       ],
+    },
+  },
+  runtimeConfig: {
+    public: {
+      // The user system only exists when a database is configured. Baked in at
+      // build time — the client uses it to decide whether to offer sign-in.
+      authEnabled: !!process.env.DATABASE_URL,
+      // Google sign-in additionally needs OAuth credentials; without them the
+      // login page offers email + password only.
+      googleEnabled: !!(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET),
+    },
+  },
+  nitro: {
+    preset: 'vercel',
+  },
+  vite: {
+    optimizeDeps: {
+      include: ['better-auth/vue'],
     },
   },
 })

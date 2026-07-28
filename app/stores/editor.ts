@@ -1,6 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import type { EditorElement, ElementType, Artboard } from '~/types/editor'
+import { useTemplateStore } from './templates'
 
 let counter = 0
 function uid(prefix = 'el') {
@@ -13,6 +14,7 @@ export interface Page {
   id: string
   artboard: Artboard
   elements: EditorElement[]
+  templateId?: string // the template this page came from; page 0's is the document's
 }
 
 function defaultArtboard(): Artboard {
@@ -31,6 +33,15 @@ export const useEditorStore = defineStore('editor', () => {
   const pickerMode = ref<'replace' | 'add'>('replace')
   const activeTool = ref<'template' | 'asset' | 'text' | 'image' | 'background'>('text')
   const leftPanelOpen = ref(true)
+  // right-click menu — `at` is the artboard-local point the menu was opened at
+  const menu = ref<{ open: boolean; x: number; y: number; targetId: string | null; at: { x: number; y: number } | null }>({
+    open: false,
+    x: 0,
+    y: 0,
+    targetId: null,
+    at: null,
+  })
+  const clipboard = ref<EditorElement | null>(null)
 
   // active page view — keeps store.elements / store.artboard working everywhere
   const active = computed<Page>(() => pages.value.find((p) => p.id === activeId.value) || pages.value[0])
@@ -199,10 +210,13 @@ export const useEditorStore = defineStore('editor', () => {
     const [el] = els.splice(from, 1)
     els.splice(to, 0, el)
   }
-  const bringForward = (id: string) => move(id, indexOf(id) + 1)
-  const sendBackward = (id: string) => move(id, indexOf(id) - 1)
-  const bringToFront = (id: string) => move(id, active.value.elements.length - 1)
-  const sendToBack = (id: string) => move(id, 0)
+  // free layout: array order is paint order, last == front.
+  // flow layout: array order is top-to-bottom on screen, so index 0 is "front".
+  const flowOrder = () => active.value.artboard.layout === 'flow'
+  const bringForward = (id: string) => move(id, indexOf(id) + (flowOrder() ? -1 : 1))
+  const sendBackward = (id: string) => move(id, indexOf(id) + (flowOrder() ? 1 : -1))
+  const bringToFront = (id: string) => move(id, flowOrder() ? 0 : active.value.elements.length - 1)
+  const sendToBack = (id: string) => move(id, flowOrder() ? active.value.elements.length - 1 : 0)
 
   // ---- selection ----
   // selecting an element also activates the page it lives on (tiled canvas)
@@ -219,6 +233,52 @@ export const useEditorStore = defineStore('editor', () => {
   function deselectAll() {
     selectedId.value = null
     pageSelected.value = false
+  }
+
+  // ---- context menu ----
+  // opened on an element (targetId) or on empty canvas (targetId = null)
+  function openMenu(x: number, y: number, targetId: string | null, pageId?: string, at: { x: number; y: number } | null = null) {
+    if (targetId) select(targetId) // also activates the page the element lives on
+    else if (pageId) activeId.value = pageId
+    menu.value = { open: true, x, y, targetId, at }
+  }
+  function closeMenu() {
+    menu.value.open = false
+  }
+
+  // ---- clipboard ----
+  function copyElement(id: string) {
+    const el = active.value.elements.find((e) => e.id === id)
+    if (el) clipboard.value = clone(el)
+  }
+  // paste at a canvas point, or offset from the original when no point is given
+  function pasteElement(at?: { x: number; y: number } | null) {
+    if (!clipboard.value) return
+    snapshot()
+    const copy = clone(clipboard.value)
+    copy.id = uid()
+    if (at) {
+      copy.x = Math.round(at.x - copy.width / 2)
+      copy.y = Math.round(at.y - copy.height / 2)
+    } else {
+      copy.x += 28
+      copy.y += 28
+    }
+    active.value.elements.push(copy)
+    selectedId.value = copy.id
+    return copy
+  }
+
+  // ---- drag & drop onto a page ----
+  // `at` is an artboard-local point (ignored by flow pages, which just append)
+  function dropElement(pageId: string, type: ElementType, partial: Partial2 = {}, at?: { x: number; y: number } | null) {
+    activeId.value = pageId
+    pageSelected.value = false
+    if (at && active.value.artboard.layout !== 'flow') {
+      const probe = makeElement(type, partial)
+      partial = { ...partial, x: Math.round(at.x - probe.width / 2), y: Math.round(at.y - probe.height / 2) }
+    }
+    return addElement(type, partial)
   }
 
   // ---- artboard / zoom ----
@@ -240,9 +300,10 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   // ---- pages ----
-  function makePage(tpl?: { artboard?: Artboard; elements?: Array<Partial2 & { type: ElementType }> }): Page {
+  function makePage(tpl?: { id?: string; artboard?: Artboard; elements?: Array<Partial2 & { type: ElementType }> }): Page {
     return {
       id: uid('pg'),
+      templateId: tpl?.id,
       artboard: tpl?.artboard ? { ...tpl.artboard } : defaultArtboard(),
       elements: (tpl?.elements || []).map((e) => makeElement(e.type, e)),
     }
@@ -267,14 +328,20 @@ export const useEditorStore = defineStore('editor', () => {
     selectedId.value = null
     pageSelected.value = true // activating a page selects its artboard
   }
-  // add a blank page that inherits the current page's size & layout
+  // add a page that inherits the current page's size & layout, seeded with the
+  // document's template (page 0's) so a new page isn't blank — `pageSeed` when the
+  // template defines one, otherwise the template's own elements.
   function addPage() {
     snapshot()
     const idx = pages.value.findIndex((p) => p.id === activeId.value)
+    const templateId = pages.value[0]?.templateId
+    const tpl = useTemplateStore().byId(templateId)
+    const seed = tpl?.pageSeed ?? tpl?.elements ?? []
     const page: Page = {
       id: uid('pg'),
+      templateId,
       artboard: clone(active.value.artboard),
-      elements: [],
+      elements: seed.map((e) => makeElement(e.type, e)),
     }
     pages.value.splice(idx + 1, 0, page)
     activeId.value = page.id
@@ -287,6 +354,7 @@ export const useEditorStore = defineStore('editor', () => {
     const src = pages.value[idx]
     const copy: Page = {
       id: uid('pg'),
+      templateId: src.templateId,
       artboard: clone(src.artboard),
       elements: src.elements.map((e) => ({ ...clone(e), id: uid() })),
     }
@@ -313,7 +381,7 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   // ---- templates / picker ----
-  function loadTemplate(tpl: { name?: string; artboard?: Artboard; elements?: Array<Partial2 & { type: ElementType }> }) {
+  function loadTemplate(tpl: { id?: string; name?: string; artboard?: Artboard; elements?: Array<Partial2 & { type: ElementType }> }) {
     if (pickerMode.value === 'replace' && tpl.name) name.value = tpl.name
     activate(makePage(tpl), pickerMode.value)
   }
@@ -338,7 +406,7 @@ export const useEditorStore = defineStore('editor', () => {
     }
   }
   // replace the CURRENT page's artboard + elements with a template
-  function applyTemplate(tpl: { artboard?: Artboard; elements?: Array<Partial2 & { type: ElementType }> }) {
+  function applyTemplate(tpl: { id?: string; artboard?: Artboard; elements?: Array<Partial2 & { type: ElementType }> }) {
     const i = pages.value.findIndex((p) => p.id === activeId.value)
     if (i < 0) return
     snapshot()
@@ -405,6 +473,13 @@ export const useEditorStore = defineStore('editor', () => {
     clearSelection,
     deselectAll,
     pageSelected,
+    menu,
+    openMenu,
+    closeMenu,
+    clipboard,
+    copyElement,
+    pasteElement,
+    dropElement,
     setArtboard,
     setZoom,
     zoomIn,

@@ -49,6 +49,7 @@ function onDown(e: PointerEvent) {
   if (editing.value) return
   e.stopPropagation()
   store.select(props.el.id)
+  if (e.button !== 0) return // right-click selects, then opens the menu
   // drag to reorder within the flow
   const board = (e.target as HTMLElement).closest('.flow-board') as HTMLElement | null
   if (!board) return
@@ -81,6 +82,9 @@ function onDown(e: PointerEvent) {
   window.addEventListener('pointermove', move)
   window.addEventListener('pointerup', up)
 }
+function onContextMenu(e: MouseEvent) {
+  store.openMenu(e.clientX, e.clientY, props.el.id)
+}
 function startEdit(e: MouseEvent) {
   if (editing.value) return
   e.stopPropagation()
@@ -95,7 +99,13 @@ function endEdit() {
 </script>
 
 <template>
-  <div class="flow-block" :class="{ selected: isSelected, dragging: reordering }" :style="blockStyle" @pointerdown="onDown">
+  <div
+    class="flow-block"
+    :class="{ selected: isSelected, dragging: reordering }"
+    :style="blockStyle"
+    @pointerdown="onDown"
+    @contextmenu.prevent.stop="onContextMenu"
+  >
     <TiptapText
       v-if="el.type === 'text'"
       class="flow-text"

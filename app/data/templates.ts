@@ -9,6 +9,9 @@ export interface CoverTemplate {
   kind: 'cover' | 'card' // grouping in the picker
   artboard: Artboard
   elements: Array<Partial<EditorElement> & { type: ElementType }>
+  // Seed elements for a page added AFTER the first one ("+ 加页"). Falls back to
+  // `elements` when absent, so a new page is never empty.
+  pageSeed?: Array<Partial<EditorElement> & { type: ElementType }>
 }
 
 // The open-source build ships with a single blank canvas.

@@ -1,9 +1,13 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { Page } from '~/stores/editor'
+import type { EditorElement, ElementType } from '~/types/editor'
 
 const props = defineProps<{ page: Page }>()
 const store = useEditorStore()
+
+const boardRef = ref<HTMLElement | null>(null)
+const dropping = ref(false)
 
 const isFlow = computed(() => props.page.artboard.layout === 'flow')
 const isActive = computed(() => props.page.id === store.activeId)
@@ -29,6 +33,60 @@ const flowBoardStyle = computed(() => ({
 
 function bgDown() {
   store.setActivePage(props.page.id) // selects this page's artboard
+}
+
+// ---- right-click on empty canvas ----
+// artboard-local point (the board is scaled by zoom from its top-left corner)
+function localPoint(e: MouseEvent | DragEvent) {
+  const r = boardRef.value?.getBoundingClientRect()
+  if (!r) return null
+  return { x: (e.clientX - r.left) / store.zoom, y: (e.clientY - r.top) / store.zoom }
+}
+function onContextMenu(e: MouseEvent) {
+  store.openMenu(e.clientX, e.clientY, null, props.page.id, isFlow.value ? null : localPoint(e))
+}
+
+// ---- drop: left-panel items (drag payload) or image files from the OS ----
+function onDragOver(e: DragEvent) {
+  e.preventDefault()
+  if (e.dataTransfer) e.dataTransfer.dropEffect = 'copy'
+  dropping.value = true
+}
+function onDragLeave(e: DragEvent) {
+  if (e.target === e.currentTarget) dropping.value = false
+}
+function onDrop(e: DragEvent) {
+  e.preventDefault()
+  dropping.value = false
+  const at = isFlow.value ? null : localPoint(e)
+  const raw = e.dataTransfer?.getData('application/x-coverly')
+  if (raw) {
+    const item = JSON.parse(raw) as { type: ElementType; partial?: Partial<EditorElement> }
+    store.dropElement(props.page.id, item.type, item.partial || {}, at)
+    return
+  }
+  const file = Array.from(e.dataTransfer?.files || []).find((f) => f.type.startsWith('image/'))
+  if (file) dropImage(file, at)
+}
+function dropImage(file: File, at: { x: number; y: number } | null) {
+  const reader = new FileReader()
+  reader.onload = () => {
+    const src = reader.result as string
+    const img = new Image()
+    img.onload = () => {
+      const ab = props.page.artboard
+      const maxH = isFlow.value ? img.height : ab.height * 0.7
+      const scale = Math.min((ab.width * 0.7) / img.width, maxH / img.height, 1)
+      store.dropElement(
+        props.page.id,
+        'image',
+        { src, width: Math.round(img.width * scale), height: Math.round(img.height * scale) },
+        at,
+      )
+    }
+    img.src = src
+  }
+  reader.readAsDataURL(file)
 }
 
 // ---- page (artboard) resize ----
@@ -74,14 +132,34 @@ function startPageResize(e: PointerEvent, h: { hx: number; hy: number }) {
 <template>
   <div class="page-view" :class="{ active: isActive }">
     <template v-if="!isFlow">
-      <div class="artboard-wrap" :style="wrapStyle" @pointerdown.self="bgDown">
-        <div class="artboard" :style="boardStyle" @pointerdown.self="bgDown">
+      <div
+        class="artboard-wrap"
+        :class="{ dropping }"
+        :style="wrapStyle"
+        @pointerdown.self="bgDown"
+        @contextmenu.prevent="onContextMenu"
+        @dragover="onDragOver"
+        @dragleave="onDragLeave"
+        @drop="onDrop"
+      >
+        <div ref="boardRef" class="artboard" :style="boardStyle" @pointerdown.self="bgDown">
           <EditorElement v-for="el in page.elements" :key="el.id" :el="el" />
         </div>
       </div>
     </template>
 
-    <div v-else class="flow-board" :style="flowBoardStyle" @pointerdown.self="bgDown">
+    <div
+      v-else
+      ref="boardRef"
+      class="flow-board"
+      :class="{ dropping }"
+      :style="flowBoardStyle"
+      @pointerdown.self="bgDown"
+      @contextmenu.prevent="onContextMenu"
+      @dragover="onDragOver"
+      @dragleave="onDragLeave"
+      @drop="onDrop"
+    >
       <FlowBlock v-for="el in page.elements" :key="el.id" :el="el" />
     </div>
 

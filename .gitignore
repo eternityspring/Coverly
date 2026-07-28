@@ -6,6 +6,9 @@
 .cache
 dist
 
+# Vercel build output + local project link
+.vercel
+
 # Node dependencies
 node_modules
 

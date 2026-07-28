@@ -1,7 +1,6 @@
 <script setup lang="ts">
-import { COVER_TEMPLATES } from '~/data/templates'
-
 const store = useEditorStore()
+const templateStore = useTemplateStore()
 
 const THUMB_W = 260
 function miniStage(width: number) {
@@ -94,7 +93,7 @@ function miniFlowText(el: any) {
           </div>
         </button>
 
-        <button v-for="t in COVER_TEMPLATES" :key="t.id" class="tpl-card" @click="store.loadTemplate(t)">
+        <button v-for="t in templateStore.all" :key="t.id" class="tpl-card" @click="store.loadTemplate(t)">
           <div class="tpl-thumb" :style="{ background: t.artboard.background }">
             <div v-if="t.artboard.layout === 'flow'" :style="miniFlowStage(t)">
               <template v-for="(el, i) in t.elements" :key="i">

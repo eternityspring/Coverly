@@ -32,13 +32,14 @@ const SWATCHES = [
   '#111827', '#ffffff', '#e74c6f', '#f59e0b', '#22c55e', '#06b6d4',
   '#6c5ce7', '#8b7bf0', '#ec4899', '#0f172a', '#64748b', '#fde047',
 ]
+// One click applies the size — the icon is drawn at the preset's real aspect ratio.
 const PRESETS = [
-  { name: 'Square · 1080×1080', w: 1080, h: 1080 },
-  { name: 'Story · 1080×1920', w: 1080, h: 1920 },
-  { name: 'Post · 1080×1350', w: 1080, h: 1350 },
-  { name: 'Slide · 1920×1080', w: 1920, h: 1080 },
-  { name: 'A4 · 794×1123', w: 794, h: 1123 },
-  { name: 'Banner · 1600×900', w: 1600, h: 900 },
+  { ratio: '1:1', name: '方图', w: 1080, h: 1080 },
+  { ratio: '3:4', name: '小红书', w: 1080, h: 1440 },
+  { ratio: '9:16', name: '故事', w: 1080, h: 1920 },
+  { ratio: '16:9', name: '横版', w: 1280, h: 720 },
+  { ratio: '2.35:1', name: '公众号', w: 1200, h: 510 },
+  { ratio: 'A4', name: '文档', w: 794, h: 1123 },
 ]
 
 // interaction helpers -> grouped into single undo steps
@@ -56,9 +57,18 @@ function num(e: Event) {
   return +(e.target as HTMLInputElement).value
 }
 
-function onPreset(e: Event) {
-  const i = +(e.target as HTMLSelectElement).value
-  if (i >= 0) store.setArtboard({ width: PRESETS[i].w, height: PRESETS[i].h })
+type Preset = (typeof PRESETS)[number]
+const isPreset = (p: Preset) => store.artboard.width === p.w && store.artboard.height === p.h
+function applyPreset(p: Preset) {
+  store.snapshot()
+  store.setArtboard({ width: p.w, height: p.h })
+  store.zoomToFit()
+}
+// draw the swatch at the preset's true aspect ratio inside a fixed box
+function ratioStyle(p: Preset) {
+  const box = 34
+  const s = Math.min(box / p.w, box / p.h)
+  return { width: Math.round(p.w * s) + 'px', height: Math.round(p.h * s) + 'px' }
 }
 </script>
 
@@ -210,6 +220,24 @@ function onPreset(e: Event) {
           </div>
         </div>
 
+        <div v-if="el.type === 'divider'" class="section">
+          <h3>分割线</h3>
+          <div class="field">
+            <label>颜色</label>
+            <div class="color-row">
+              <input type="color" :value="/^#/.test(el.borderColor || '') ? el.borderColor : '#111827'" @focus="begin" @change="commit" @input="set({ borderColor: ($event.target as HTMLInputElement).value })" />
+              <input class="hex" type="text" :value="el.borderColor" @focus="begin" @blur="commit" @input="set({ borderColor: ($event.target as HTMLInputElement).value })" />
+            </div>
+            <div class="swatches">
+              <span v-for="c in SWATCHES" :key="c" class="swatch" :style="{ background: c }" @click="setOnce({ borderColor: c })" />
+            </div>
+          </div>
+          <div class="field">
+            <label>粗细</label>
+            <input type="number" min="1" :value="el.borderWidth" @focus="begin" @blur="commit" @input="set({ borderWidth: Math.max(1, num($event)) })" />
+          </div>
+        </div>
+
         <div v-if="!isFlow" class="section">
           <h3>Position &amp; size</h3>
           <div class="field-row">
@@ -310,13 +338,20 @@ function onPreset(e: Event) {
         </p>
       </div>
       <div class="section">
-        <h3>Canvas size</h3>
-        <div class="field">
-          <label>Preset</label>
-          <select @change="onPreset">
-            <option :value="-1">Choose a size…</option>
-            <option v-for="(p, i) in PRESETS" :key="p.name" :value="i">{{ p.name }}</option>
-          </select>
+        <h3>画布尺寸</h3>
+        <div class="ratio-grid">
+          <button
+            v-for="p in PRESETS"
+            :key="p.ratio"
+            class="ratio"
+            :class="{ active: isPreset(p) }"
+            :title="`${p.name} · ${p.w}×${p.h}`"
+            @click="applyPreset(p)"
+          >
+            <span class="ratio-box"><i :style="ratioStyle(p)" /></span>
+            <span class="ratio-ratio">{{ p.ratio }}</span>
+            <span class="ratio-name">{{ p.name }}</span>
+          </button>
         </div>
         <div class="field-row">
           <div class="field">

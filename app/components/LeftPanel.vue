@@ -1,15 +1,27 @@
 <script setup lang="ts">
-import { COVER_TEMPLATES } from '~/data/templates'
+import type { ElementType, EditorElement } from '~/types/editor'
 
 const store = useEditorStore()
+const templateStore = useTemplateStore()
 
-function addText(preset: 'heading' | 'subheading' | 'body') {
-  const map = {
-    heading: { text: '主标题', fontSize: 64, fontWeight: 900, height: 100, width: 480 },
-    subheading: { text: '副标题', fontSize: 36, fontWeight: 600, height: 64, width: 420 },
-    body: { text: '正文内容', fontSize: 22, fontWeight: 400, height: 44, width: 360 },
-  } as const
-  store.addElement('text', { ...map[preset], fontFamily: 'Noto Serif SC', textAlign: 'left' })
+const TEXT_PRESETS = {
+  heading: { text: '主标题', fontSize: 64, fontWeight: 900, height: 100, width: 480 },
+  subheading: { text: '副标题', fontSize: 36, fontWeight: 600, height: 64, width: 420 },
+  body: { text: '正文内容', fontSize: 22, fontWeight: 400, height: 44, width: 360 },
+} as const
+type TextPreset = keyof typeof TEXT_PRESETS
+
+function textPartial(preset: TextPreset): Partial<EditorElement> {
+  return { ...TEXT_PRESETS[preset], fontFamily: 'Noto Serif SC', textAlign: 'left' }
+}
+function addText(preset: TextPreset) {
+  store.addElement('text', textPartial(preset))
+}
+
+// drag an item onto the canvas to drop it at a chosen spot (click still centers it)
+function onDragItem(e: DragEvent, type: ElementType, partial: Partial<EditorElement> = {}) {
+  e.dataTransfer?.setData('application/x-coverly', JSON.stringify({ type, partial }))
+  if (e.dataTransfer) e.dataTransfer.effectAllowed = 'copy'
 }
 
 function onUpload(e: Event) {
@@ -57,7 +69,7 @@ const GRADIENTS = [
       <h2 class="lp-title">模板</h2>
       <p class="lp-hint">点击应用到当前页</p>
       <div class="lp-tpl-grid">
-        <button v-for="t in COVER_TEMPLATES" :key="t.id" class="lp-tpl" @click="store.applyTemplate(t)">
+        <button v-for="t in templateStore.all" :key="t.id" class="lp-tpl" @click="store.applyTemplate(t)">
           <PageThumb :page="t" :w="96" :h="62" />
           <span>{{ t.name }}</span>
         </button>
@@ -67,17 +79,18 @@ const GRADIENTS = [
     <!-- 素材（形状） -->
     <template v-else-if="store.activeTool === 'asset'">
       <h2 class="lp-title">素材</h2>
+      <p class="lp-hint">点击添加到画布中央，或拖到画布上指定位置</p>
       <div class="lp-shape-grid">
-        <button class="lp-shape" @click="store.addElement('rect')">
+        <button class="lp-shape" draggable="true" @dragstart="onDragItem($event, 'rect')" @click="store.addElement('rect')">
           <Icon name="lucide:square" /><span>矩形</span>
         </button>
-        <button class="lp-shape" @click="store.addElement('ellipse')">
+        <button class="lp-shape" draggable="true" @dragstart="onDragItem($event, 'ellipse')" @click="store.addElement('ellipse')">
           <Icon name="lucide:circle" /><span>圆形</span>
         </button>
-        <button class="lp-shape" @click="store.addElement('triangle')">
+        <button class="lp-shape" draggable="true" @dragstart="onDragItem($event, 'triangle')" @click="store.addElement('triangle')">
           <Icon name="lucide:triangle" /><span>三角</span>
         </button>
-        <button class="lp-shape" @click="store.addElement('divider')">
+        <button class="lp-shape" draggable="true" @dragstart="onDragItem($event, 'divider')" @click="store.addElement('divider')">
           <Icon name="lucide:minus" /><span>分割线</span>
         </button>
       </div>
@@ -86,9 +99,18 @@ const GRADIENTS = [
     <!-- 文字 -->
     <template v-else-if="store.activeTool === 'text'">
       <h2 class="lp-title">文字</h2>
-      <button class="lp-text-btn lp-text-h1" @click="addText('heading')">添加主标题</button>
-      <button class="lp-text-btn lp-text-h2" @click="addText('subheading')">添加副标题</button>
-      <button class="lp-text-btn" @click="addText('body')">添加正文</button>
+      <p class="lp-hint">点击添加到画布中央，或拖到画布上指定位置</p>
+      <button
+        v-for="p in (['heading', 'subheading', 'body'] as const)"
+        :key="p"
+        class="lp-text-btn"
+        :class="{ 'lp-text-h1': p === 'heading', 'lp-text-h2': p === 'subheading' }"
+        draggable="true"
+        @dragstart="onDragItem($event, 'text', textPartial(p))"
+        @click="addText(p)"
+      >
+        添加{{ p === 'heading' ? '主标题' : p === 'subheading' ? '副标题' : '正文' }}
+      </button>
     </template>
 
     <!-- 图片 -->
@@ -99,7 +121,7 @@ const GRADIENTS = [
         <span>上传图片</span>
         <input type="file" accept="image/*" hidden @change="onUpload" />
       </label>
-      <p class="lp-hint">支持 PNG / JPG，拖入画布后可自由缩放。</p>
+      <p class="lp-hint">支持 PNG / JPG。也可以直接把图片文件拖到画布上，落点即位置。</p>
     </template>
 
     <!-- 背景 -->

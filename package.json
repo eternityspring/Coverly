@@ -7,7 +7,10 @@
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
-    "postinstall": "nuxt prepare"
+    "postinstall": "nuxt prepare",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
+    "db:seed": "node --env-file-if-exists=.env --experimental-strip-types scripts/seed-templates.ts"
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.114",
@@ -19,9 +22,15 @@
     "@tiptap/pm": "^3.27.1",
     "@tiptap/starter-kit": "^3.27.1",
     "@tiptap/vue-3": "^3.27.1",
+    "better-auth": "^1.6.25",
+    "drizzle-orm": "^0.45.2",
     "nuxt": "^4.4.8",
     "pinia": "^3.0.4",
+    "postgres": "^3.4.9",
     "vue": "^3.5.38",
     "vue-router": "^5.1.0"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.10"
   }
 }

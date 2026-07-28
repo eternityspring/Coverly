@@ -11,6 +11,17 @@ const emit = defineEmits<{
 }>()
 
 const editor = shallowRef<Editor | null>(null)
+
+// Outside the editor an empty <p> produces no line box, so a blank line the user
+// typed would render as nothing. Stored HTML therefore keeps blank lines as
+// <p><br></p>, and the editor gets them back as truly empty paragraphs — otherwise
+// the <br> is parsed as a hard break inside the paragraph.
+function keepBlankLines(html: string) {
+  return html.replace(/<p([^>]*)><\/p>/g, '<p$1><br></p>')
+}
+function toEditorHtml(html: string) {
+  return html.replace(/<p([^>]*)><br\s*\/?><\/p>/g, '<p$1></p>')
+}
 const tick = ref(0) // bump to refresh toolbar active-states (Tiptap isActive isn't reactive)
 
 watch(
@@ -18,10 +29,10 @@ watch(
   (on) => {
     if (on && !editor.value) {
       editor.value = new Editor({
-        content: props.html || '<p></p>',
+        content: toEditorHtml(props.html || '<p></p>'),
         extensions: [StarterKit, TextStyle, Color],
         autofocus: 'end',
-        onUpdate: ({ editor }) => emit('update', { html: editor.getHTML(), text: editor.getText() }),
+        onUpdate: ({ editor }) => emit('update', { html: keepBlankLines(editor.getHTML()), text: editor.getText() }),
         onSelectionUpdate: () => (tick.value += 1),
         onBlur: () => emit('blur'),
       })

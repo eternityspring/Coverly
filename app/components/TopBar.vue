@@ -1,5 +1,22 @@
 <script setup lang="ts">
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
+import { authClient } from '~/utils/auth-client'
+
 const store = useEditorStore()
+const { user, isPending, authEnabled } = useUser()
+
+const menuOpen = ref(false)
+const initial = computed(() => (user.value?.name || user.value?.email || '?').charAt(0))
+
+async function signOut() {
+  menuOpen.value = false
+  await authClient.signOut()
+  window.location.reload() // drop the members-only templates from the picker
+}
+
+const closeMenu = () => (menuOpen.value = false)
+onMounted(() => window.addEventListener('pointerdown', closeMenu))
+onBeforeUnmount(() => window.removeEventListener('pointerdown', closeMenu))
 
 function exportJSON() {
   const blob = new Blob([store.toJSON()], { type: 'application/json' })
@@ -24,7 +41,7 @@ function importJSON(e: Event) {
   <header class="topbar">
     <div class="brand">
       <span class="logo"><Icon name="lucide:palette" /></span>
-      <span>Mini&nbsp;Canva</span>
+      <span>Coverly</span>
     </div>
     <input v-model="store.name" class="title-input" spellcheck="false" />
 
@@ -43,5 +60,21 @@ function importJSON(e: Event) {
       <input type="file" accept="application/json,.json" hidden @change="importJSON" />
     </label>
     <button class="btn primary" title="Export design JSON" @click="exportJSON"><Icon name="lucide:download" /> Export</button>
+
+    <!-- Account — absent entirely when no database is configured -->
+    <template v-if="authEnabled">
+      <div v-if="user" class="account" @pointerdown.stop>
+        <button class="account-btn" @click="menuOpen = !menuOpen">
+          <img v-if="user.image" class="account-avatar" :src="user.image" alt="" />
+          <span v-else class="account-avatar">{{ initial }}</span>
+          <span class="account-name">{{ user.name || user.email }}</span>
+        </button>
+        <div v-if="menuOpen" class="account-menu">
+          <div class="account-email">{{ user.email }}</div>
+          <button class="ctx-item" @click="signOut"><Icon name="lucide:log-out" /> 退出登录</button>
+        </div>
+      </div>
+      <NuxtLink v-else-if="!isPending" to="/login" class="btn"><Icon name="lucide:user" /> 登录</NuxtLink>
+    </template>
   </header>
 </template>

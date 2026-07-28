@@ -44,6 +44,10 @@ const shapeStyle = computed(() => ({
   border: border.value,
   borderRadius: props.el.type === 'ellipse' ? '50%' : props.el.radius + 'px',
 }))
+// a horizontal rule, vertically centred so it stays visible when the box is taller
+const dividerStyle = computed(() => ({
+  borderTop: `${props.el.borderWidth || 1}px solid ${props.el.borderColor}`,
+}))
 const imgStyle = computed(() => ({
   objectFit: props.el.objectFit || 'cover',
   borderRadius: props.el.radius + 'px',
@@ -116,7 +120,12 @@ function onBodyDown(e: PointerEvent) {
   if (editing.value) return
   e.stopPropagation()
   store.select(props.el.id)
+  if (e.button !== 0) return // right-click selects, then opens the menu
   startDrag(e)
+}
+
+function onContextMenu(e: MouseEvent) {
+  store.openMenu(e.clientX, e.clientY, props.el.id)
 }
 
 function startDrag(e: PointerEvent) {
@@ -225,7 +234,13 @@ function endEdit() {
 </script>
 
 <template>
-  <div ref="wrapRef" class="el-wrap" :style="wrapStyle" @pointerdown="onBodyDown">
+  <div
+    ref="wrapRef"
+    class="el-wrap"
+    :style="wrapStyle"
+    @pointerdown="onBodyDown"
+    @contextmenu.prevent.stop="onContextMenu"
+  >
     <!-- content -->
     <div v-if="el.type === 'rect'" class="el-content" :style="shapeStyle" />
     <div v-else-if="el.type === 'ellipse'" class="el-content" :style="shapeStyle" />
@@ -234,6 +249,9 @@ function endEdit() {
       class="el-content"
       :style="{ background: el.fill, clipPath: 'polygon(50% 0,100% 100%,0 100%)' }"
     />
+    <div v-else-if="el.type === 'divider'" class="el-content el-divider">
+      <i :style="dividerStyle" />
+    </div>
     <img
       v-else-if="el.type === 'image'"
       class="el-content el-img"
