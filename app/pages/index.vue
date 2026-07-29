@@ -4,6 +4,8 @@ import { onMounted, onBeforeUnmount, watch } from 'vue'
 const store = useEditorStore()
 const templateStore = useTemplateStore()
 const { user } = useUser()
+useAgentImageImport()
+useLocalAutosave()
 
 function isTyping() {
   const a = document.activeElement as HTMLElement | null

@@ -3,6 +3,16 @@ import type { ElementType, EditorElement } from '~/types/editor'
 
 const store = useEditorStore()
 const templateStore = useTemplateStore()
+const docStore = useDocumentStore()
+
+function relativeTime(ts: number) {
+  const s = Math.floor((Date.now() - ts) / 1000)
+  if (s < 60) return '刚刚'
+  if (s < 3600) return `${Math.floor(s / 60)} 分钟前`
+  if (s < 86400) return `${Math.floor(s / 3600)} 小时前`
+  if (s < 86400 * 7) return `${Math.floor(s / 86400)} 天前`
+  return new Date(ts).toLocaleDateString('zh-CN')
+}
 
 const TEXT_PRESETS = {
   heading: { text: '主标题', fontSize: 64, fontWeight: 900, height: 100, width: 480 },
@@ -122,6 +132,37 @@ const GRADIENTS = [
         <input type="file" accept="image/*" hidden @change="onUpload" />
       </label>
       <p class="lp-hint">支持 PNG / JPG。也可以直接把图片文件拖到画布上，落点即位置。</p>
+    </template>
+
+    <!-- 我的文档（本地） -->
+    <template v-else-if="store.activeTool === 'documents'">
+      <h2 class="lp-title">我的文档</h2>
+      <p class="lp-hint">自动保存在这台浏览器里，最多 {{ docStore.MAX }} 份</p>
+
+      <div v-if="!docStore.docs.length" class="lp-empty">还没有保存的文档。</div>
+
+      <div v-else class="lp-doc-list">
+        <div
+          v-for="d in docStore.docs"
+          :key="d.id"
+          class="lp-doc"
+          :class="{ current: d.id === store.docId }"
+          @click="store.loadDocument(d)"
+        >
+          <PageThumb v-if="d.pages[0]" :page="d.pages[0]" :w="72" :h="48" />
+          <div class="lp-doc-meta">
+            <strong>{{ d.name || '未命名' }}</strong>
+            <em>{{ relativeTime(d.updatedAt) }} · {{ d.pages.length }} 页</em>
+          </div>
+          <button class="lp-doc-del" title="删除" @click.stop="docStore.remove(d.id)">
+            <Icon name="lucide:trash-2" />
+          </button>
+        </div>
+      </div>
+
+      <button class="lp-doc-new" @click="store.openPicker()">
+        <Icon name="lucide:plus" /> 新建文档
+      </button>
     </template>
 
     <!-- 背景 -->

@@ -22,5 +22,15 @@ const TOOLS = [
       <Icon :name="t.icon" />
       <span>{{ t.label }}</span>
     </button>
+
+    <!-- pinned to the bottom of the rail -->
+    <button
+      class="rail-item rail-bottom"
+      :class="{ active: store.activeTool === 'documents' && store.leftPanelOpen }"
+      @click="store.setTool('documents')"
+    >
+      <Icon name="lucide:circle-user" />
+      <span>我的</span>
+    </button>
   </nav>
 </template>

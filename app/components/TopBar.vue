@@ -6,7 +6,30 @@ const store = useEditorStore()
 const { user, isPending, authEnabled } = useUser()
 
 const menuOpen = ref(false)
+const exportOpen = ref(false)
+const exporting = ref(false)
+const exportError = ref('')
 const initial = computed(() => (user.value?.name || user.value?.email || '?').charAt(0))
+
+const { exportPNG, exportJSON } = useExport()
+
+async function onExportPNG() {
+  exportOpen.value = false
+  exporting.value = true
+  exportError.value = ''
+  try {
+    await exportPNG()
+  } catch (err) {
+    console.error('[export] PNG failed', err)
+    exportError.value = '导出图片失败，请重试'
+  } finally {
+    exporting.value = false
+  }
+}
+function onExportJSON() {
+  exportOpen.value = false
+  exportJSON()
+}
 
 async function signOut() {
   menuOpen.value = false
@@ -14,18 +37,13 @@ async function signOut() {
   window.location.reload() // drop the members-only templates from the picker
 }
 
-const closeMenu = () => (menuOpen.value = false)
-onMounted(() => window.addEventListener('pointerdown', closeMenu))
-onBeforeUnmount(() => window.removeEventListener('pointerdown', closeMenu))
-
-function exportJSON() {
-  const blob = new Blob([store.toJSON()], { type: 'application/json' })
-  const a = document.createElement('a')
-  a.href = URL.createObjectURL(blob)
-  a.download = (store.name || 'design').replace(/\s+/g, '-').toLowerCase() + '.json'
-  a.click()
-  URL.revokeObjectURL(a.href)
+function closeMenus() {
+  menuOpen.value = false
+  exportOpen.value = false
 }
+onMounted(() => window.addEventListener('pointerdown', closeMenus))
+onBeforeUnmount(() => window.removeEventListener('pointerdown', closeMenus))
+
 function importJSON(e: Event) {
   const input = e.target as HTMLInputElement
   const file = input.files?.[0]
@@ -54,12 +72,28 @@ function importJSON(e: Event) {
 
     <div class="spacer" />
 
-    <button class="btn" title="新增一页（选择模板）" @click="store.openPicker('add')"><Icon name="lucide:layout-template" /> 模板</button>
+    <button class="btn" title="选择模板，新建一个文档" @click="store.openPicker()"><Icon name="lucide:layout-template" /> 模板</button>
     <label class="btn" title="Import design JSON">
       <Icon name="lucide:upload" /> Import
       <input type="file" accept="application/json,.json" hidden @change="importJSON" />
     </label>
-    <button class="btn primary" title="Export design JSON" @click="exportJSON"><Icon name="lucide:download" /> Export</button>
+    <div class="export" @pointerdown.stop>
+      <button class="btn primary" :disabled="exporting" @click="exportOpen = !exportOpen">
+        <Icon name="lucide:download" /> {{ exporting ? '导出中…' : '导出' }}
+        <Icon name="lucide:chevron-down" class="btn-caret" />
+      </button>
+      <div v-if="exportOpen" class="export-menu">
+        <button class="ctx-item" @click="onExportPNG">
+          <Icon name="lucide:image" /> 导出图片
+          <span class="ctx-key">PNG 2x</span>
+        </button>
+        <button class="ctx-item" @click="onExportJSON">
+          <Icon name="lucide:file-json" /> 导出配置
+          <span class="ctx-key">JSON</span>
+        </button>
+      </div>
+      <p v-if="exportError" class="export-error">{{ exportError }}</p>
+    </div>
 
     <!-- Account — absent entirely when no database is configured -->
     <template v-if="authEnabled">

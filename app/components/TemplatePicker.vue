@@ -80,8 +80,8 @@ function miniFlowText(el: any) {
   <div v-if="store.pickerOpen" class="picker-overlay">
     <div class="picker">
       <header class="picker-head">
-        <h1>选择一个模板</h1>
-        <p>选模板后进入自由画布 — 所有元素都能拖拽、缩放、旋转、双击改字。</p>
+        <h1>新建文档</h1>
+        <p>选一个模板开始 — 所有元素都能拖拽、缩放、旋转、双击改字。当前文档会自动保存在本地。</p>
       </header>
 
       <div class="tpl-grid">
@@ -117,8 +117,8 @@ function miniFlowText(el: any) {
         </button>
       </div>
 
-      <button v-if="store.elements.length" class="picker-close" @click="store.pickerOpen = false">
-        返回当前设计
+      <button v-if="store.docId" class="picker-close" @click="store.pickerOpen = false">
+        返回当前文档
       </button>
     </div>
   </div>

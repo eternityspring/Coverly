@@ -395,6 +395,9 @@ textarea {
   background: var(--accent-soft);
   color: var(--accent);
 }
+.rail-bottom {
+  margin-top: auto;
+}
 .left-panel {
   width: 284px;
   flex: none;
@@ -894,6 +897,100 @@ textarea {
   cursor: pointer;
   padding: 3px;
 }
+/* ---------- my documents (local shelf) ---------- */
+.lp-empty {
+  padding: 20px 4px;
+  color: var(--text-dim);
+  font-size: 13px;
+}
+.lp-doc-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.lp-doc {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel-2);
+  cursor: pointer;
+  transition: all 0.12s;
+}
+.lp-doc:hover {
+  border-color: var(--accent);
+}
+.lp-doc.current {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+.lp-doc .page-thumb {
+  flex: none;
+  border-radius: 6px;
+  border: 1px solid var(--border);
+}
+.lp-doc-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.lp-doc-meta strong {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.lp-doc-meta em {
+  font-style: normal;
+  font-size: 11px;
+  color: var(--text-dim);
+}
+.lp-doc-del {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border: none;
+  background: transparent;
+  border-radius: 7px;
+  display: grid;
+  place-items: center;
+  color: var(--text-dim);
+  opacity: 0;
+  transition: all 0.12s;
+}
+.lp-doc:hover .lp-doc-del {
+  opacity: 1;
+}
+.lp-doc-del:hover {
+  background: #fdeef2;
+  color: var(--danger);
+}
+.lp-doc-new {
+  width: 100%;
+  margin-top: 10px;
+  height: 38px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text-dim);
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+.lp-doc-new:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .artboard-wrap {
   flex: none;
   position: relative;
@@ -1305,6 +1402,37 @@ input[type='range'] {
   text-decoration: underline;
 }
 
+/* ---------- top bar export ---------- */
+.export {
+  position: relative;
+}
+.btn-caret {
+  font-size: 13px;
+  opacity: 0.75;
+  margin-left: -2px;
+}
+.export-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 190px;
+  padding: 6px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: var(--shadow);
+  z-index: 40;
+}
+.export-error {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  margin: 0;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--danger);
+}
+
 /* ---------- top bar account ---------- */
 .account {
   position: relative;
@@ -1495,6 +1623,34 @@ input[type='range'] {
   color: var(--text-dim);
   font-size: 13px;
   line-height: 1.6;
+}
+/* margin-top:auto keeps it at the bottom when the panel is short, and lets it
+   follow the content when the panel scrolls */
+.props-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--panel);
+}
+.pf-btn {
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: transparent;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: var(--text-dim);
+  font-size: 16px;
+  text-decoration: none;
+  cursor: pointer;
+}
+.pf-btn:hover {
+  background: var(--accent-soft);
+  color: var(--accent);
 }
 .empty-hint kbd {
   background: var(--panel-2);

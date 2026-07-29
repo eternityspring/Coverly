@@ -24,6 +24,7 @@
     "@tiptap/vue-3": "^3.27.1",
     "better-auth": "^1.6.25",
     "drizzle-orm": "^0.45.2",
+    "html-to-image": "^1.11.11",
     "nuxt": "^4.4.8",
     "pinia": "^3.0.4",
     "postgres": "^3.4.9",

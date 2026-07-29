@@ -9,6 +9,9 @@ dist
 # Vercel build output + local project link
 .vercel
 
+# Images written by the local agent image bridge
+public/generated
+
 # Node dependencies
 node_modules
 

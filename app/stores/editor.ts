@@ -30,8 +30,10 @@ export const useEditorStore = defineStore('editor', () => {
   const pageSelected = ref(false) // is the active page's artboard selected (shows resize handles)
   const zoom = ref(0.5)
   const pickerOpen = ref(true) // template picker shown on first load
-  const pickerMode = ref<'replace' | 'add'>('replace')
-  const activeTool = ref<'template' | 'asset' | 'text' | 'image' | 'background'>('text')
+  // id of the document being edited — null until one is started or restored,
+  // which is what keeps the untouched first-load state out of local storage
+  const docId = ref<string | null>(null)
+  const activeTool = ref<'template' | 'asset' | 'text' | 'image' | 'background' | 'documents'>('text')
   const leftPanelOpen = ref(true)
   // right-click menu — `at` is the artboard-local point the menu was opened at
   const menu = ref<{ open: boolean; x: number; y: number; targetId: string | null; at: { x: number; y: number } | null }>({
@@ -308,19 +310,18 @@ export const useEditorStore = defineStore('editor', () => {
       elements: (tpl?.elements || []).map((e) => makeElement(e.type, e)),
     }
   }
-  function activate(page: Page, mode: 'replace' | 'add') {
-    if (mode === 'replace') {
-      pages.value = [page]
-      resetHistory()
-    } else {
-      snapshot()
-      pages.value.push(page)
-    }
+  // Picking from the template picker always starts a NEW document — that is what
+  // draws the boundary between documents on the local shelf. Applying a template
+  // to a page within the current document is applyTemplate().
+  function activate(page: Page) {
+    docId.value = uid('doc')
+    pages.value = [page]
+    resetHistory()
     activeId.value = page.id
     selectedId.value = null
-    if (mode === 'replace') zoom.value = fitZoom()
+    pageSelected.value = false
+    zoom.value = fitZoom()
     pickerOpen.value = false
-    pickerMode.value = 'add'
   }
   function setActivePage(id: string) {
     if (!pages.value.some((p) => p.id === id)) return
@@ -382,14 +383,14 @@ export const useEditorStore = defineStore('editor', () => {
 
   // ---- templates / picker ----
   function loadTemplate(tpl: { id?: string; name?: string; artboard?: Artboard; elements?: Array<Partial2 & { type: ElementType }> }) {
-    if (pickerMode.value === 'replace' && tpl.name) name.value = tpl.name
-    activate(makePage(tpl), pickerMode.value)
+    name.value = tpl.name || 'Untitled design'
+    activate(makePage(tpl))
   }
   function startBlank() {
-    activate(makePage(), pickerMode.value)
+    name.value = 'Untitled design'
+    activate(makePage())
   }
-  function openPicker(mode: 'replace' | 'add' = 'add') {
-    pickerMode.value = mode
+  function openPicker() {
     pickerOpen.value = true
   }
   function closePicker() {
@@ -397,7 +398,7 @@ export const useEditorStore = defineStore('editor', () => {
   }
 
   // ---- left tool rail ----
-  function setTool(t: 'template' | 'asset' | 'text' | 'image' | 'background') {
+  function setTool(t: 'template' | 'asset' | 'text' | 'image' | 'background' | 'documents') {
     if (activeTool.value === t && leftPanelOpen.value) {
       leftPanelOpen.value = false // click the active tool again -> collapse
     } else {
@@ -421,9 +422,24 @@ export const useEditorStore = defineStore('editor', () => {
   function toJSON() {
     return JSON.stringify({ name: name.value, pages: pages.value }, null, 2)
   }
+  // Restore a document from the local shelf — same id, so editing keeps
+  // updating that record instead of spawning a new one.
+  function loadDocument(doc: { id: string; name: string; pages: Page[] }) {
+    docId.value = doc.id
+    name.value = doc.name
+    pages.value = clone(doc.pages)
+    activeId.value = pages.value[0]?.id
+    selectedId.value = null
+    pageSelected.value = false
+    resetHistory()
+    zoom.value = fitZoom()
+    pickerOpen.value = false
+  }
+
   function loadJSON(str: string) {
     const d = JSON.parse(str)
     snapshot()
+    docId.value = uid('doc') // an imported file is a new document
     if (d.name) name.value = d.name
     if (Array.isArray(d.pages)) {
       pages.value = d.pages
@@ -451,7 +467,8 @@ export const useEditorStore = defineStore('editor', () => {
     canUndo,
     canRedo,
     pickerOpen,
-    pickerMode,
+    docId,
+    loadDocument,
     snapshot,
     beginInteraction,
     commitInteraction,

@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import type { EditorElement } from '~/types/editor'
 
 const store = useEditorStore()
+const shortcutsOpen = ref(false)
+const REPO_URL = 'https://github.com/eternityspring/Coverly'
 const el = computed(() => store.selected)
 const isShape = computed(() => ['rect', 'ellipse', 'triangle'].includes(el.value?.type || ''))
 const isFlow = computed(() => store.artboard.layout === 'flow')
@@ -58,12 +60,29 @@ function num(e: Event) {
 }
 
 type Preset = (typeof PRESETS)[number]
-const isPreset = (p: Preset) => store.artboard.width === p.w && store.artboard.height === p.h
+
+// A flow card's height is driven by its content, so `height` is never read when
+// rendering one. Its width, on the other hand, is the width the template was
+// designed at — type sizes are tuned to it — so a preset must not overwrite it.
+// In flow a preset therefore only re-shapes the starting height, applying its
+// ratio to the width already in place; the card still grows past it.
+const flowMinHeight = (p: Preset) => Math.round((store.artboard.width * p.h) / p.w)
+
+const isPreset = (p: Preset) => {
+  if (!isFlow.value) return store.artboard.width === p.w && store.artboard.height === p.h
+  const min = store.artboard.minHeight ?? 0
+  return min > 0 && Math.abs(min / store.artboard.width - p.h / p.w) < 0.01
+}
+
 function applyPreset(p: Preset) {
   store.snapshot()
-  store.setArtboard({ width: p.w, height: p.h })
+  store.setArtboard(isFlow.value ? { minHeight: flowMinHeight(p) } : { width: p.w, height: p.h })
   store.zoomToFit()
 }
+const presetTitle = (p: Preset) =>
+  isFlow.value
+    ? `${p.name} · ${store.artboard.width}×${flowMinHeight(p)} 起`
+    : `${p.name} · ${p.w}×${p.h}`
 // draw the swatch at the preset's true aspect ratio inside a fixed box
 function ratioStyle(p: Preset) {
   const box = 34
@@ -345,7 +364,7 @@ function ratioStyle(p: Preset) {
             :key="p.ratio"
             class="ratio"
             :class="{ active: isPreset(p) }"
-            :title="`${p.name} · ${p.w}×${p.h}`"
+            :title="presetTitle(p)"
             @click="applyPreset(p)"
           >
             <span class="ratio-box"><i :style="ratioStyle(p)" /></span>
@@ -353,14 +372,32 @@ function ratioStyle(p: Preset) {
             <span class="ratio-name">{{ p.name }}</span>
           </button>
         </div>
+        <p v-if="isFlow" class="layout-desc">宽度保持模板的设计宽度不变，比例只决定起始高度，内容多了继续往下长。</p>
         <div class="field-row">
           <div class="field">
-            <label>Width</label>
+            <label>宽度</label>
             <input type="number" :value="store.artboard.width" @input="store.setArtboard({ width: Math.max(1, num($event)) })" />
           </div>
           <div class="field">
-            <label>Height</label>
-            <input type="number" :value="store.artboard.height" @input="store.setArtboard({ height: Math.max(1, num($event)) })" />
+            <label>{{ isFlow ? '最小高度' : '高度' }}</label>
+            <input
+              v-if="isFlow"
+              type="number"
+              :value="store.artboard.minHeight ?? 0"
+              @input="store.setArtboard({ minHeight: Math.max(0, num($event)) })"
+            />
+            <input v-else type="number" :value="store.artboard.height" @input="store.setArtboard({ height: Math.max(1, num($event)) })" />
+          </div>
+        </div>
+        <!-- flow-only spacing: what actually shapes a card besides its width -->
+        <div v-if="isFlow" class="field-row">
+          <div class="field">
+            <label>内边距</label>
+            <input type="number" :value="store.artboard.padding ?? 44" @input="store.setArtboard({ padding: Math.max(0, num($event)) })" />
+          </div>
+          <div class="field">
+            <label>块间距</label>
+            <input type="number" :value="store.artboard.gap ?? 16" @input="store.setArtboard({ gap: Math.max(0, num($event)) })" />
           </div>
         </div>
       </div>
@@ -374,14 +411,19 @@ function ratioStyle(p: Preset) {
           <span v-for="c in SWATCHES" :key="c" class="swatch" :style="{ background: c }" @click="store.setArtboard({ background: c })" />
         </div>
       </div>
-      <div class="empty-hint">
-        Select an element to edit it.<br /><br />
-        <strong>Shortcuts</strong><br />
-        <kbd>Del</kbd> delete · <kbd>⌘D</kbd> duplicate<br />
-        <kbd>⌘Z</kbd> undo · <kbd>⌘⇧Z</kbd> redo<br />
-        <kbd>↑↓←→</kbd> nudge · <kbd>Esc</kbd> deselect<br />
-        Double-click text to edit · drag the top handle to rotate.
-      </div>
+      <div class="empty-hint">选中一个元素即可编辑它。</div>
     </template>
+
+    <!-- pinned to the bottom of the panel, whatever is selected -->
+    <footer class="props-footer">
+      <button class="pf-btn" title="快捷键" @click="shortcutsOpen = true">
+        <Icon name="lucide:keyboard" />
+      </button>
+      <a class="pf-btn" :href="REPO_URL" target="_blank" rel="noopener noreferrer" title="GitHub 项目主页">
+        <Icon name="lucide:github" />
+      </a>
+    </footer>
+
+    <ShortcutsDialog v-if="shortcutsOpen" @close="shortcutsOpen = false" />
   </aside>
 </template>
