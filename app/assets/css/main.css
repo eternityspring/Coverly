@@ -1735,6 +1735,25 @@ input[type='range'] {
   text-decoration: none;
   cursor: pointer;
 }
+/* the group entry is a labelled button, not a bare icon */
+.pf-group {
+  width: auto;
+  gap: 6px;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+  display: inline-flex;
+  align-items: center;
+}
+.pf-group:hover {
+  background: var(--accent);
+  color: #fff;
+}
+.pf-spacer {
+  flex: 1;
+}
 .pf-btn svg {
   width: 16px;
   height: 16px;

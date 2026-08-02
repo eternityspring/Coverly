@@ -6,6 +6,7 @@ import { ensureFont, ensureAllFonts } from '~/utils/fontLoader'
 
 const store = useEditorStore()
 const shortcutsOpen = ref(false)
+const groupOpen = ref(false)
 const REPO_URL = 'https://github.com/eternityspring/Coverly'
 const X_URL = 'https://x.com/eternityspring'
 const el = computed(() => store.selected)
@@ -446,6 +447,10 @@ function ratioStyle(p: Preset) {
 
     <!-- pinned to the bottom of the panel, whatever is selected -->
     <footer class="props-footer">
+      <button class="pf-btn pf-group" title="加入烁皓 AI 交流群" @click="groupOpen = true">
+        <Icon name="lucide:users" /> AI 交流群
+      </button>
+      <span class="pf-spacer" />
       <button class="pf-btn" title="快捷键" @click="shortcutsOpen = true">
         <Icon name="lucide:keyboard" />
       </button>
@@ -461,6 +466,7 @@ function ratioStyle(p: Preset) {
     </footer>
 
     <ShortcutsDialog v-if="shortcutsOpen" @close="shortcutsOpen = false" />
+    <GroupDialog v-if="groupOpen" @close="groupOpen = false" />
   </aside>
 
   <!-- collapsed: a tab on the right edge, vertically centred, to bring it back -->

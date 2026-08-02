@@ -71,6 +71,24 @@ State lives in the Pinia store; the artboard is a plain `div` scaled with a CSS
 interactions (deltas divided by `zoom`, resize done in the element's local
 rotated frame so it stays correct at any angle).
 
+## 烁皓 AI 交流群
+
+我是烁皓，一个天天用 AI 做产品、搞钱的独立开发者，建了一个「付费 AI 交流群」。
+
+- 💰 入群早鸟价 **￥29**
+- 群每满 10 人涨 10 元：29 → 39 → 49…… 封顶 **129**，越早进越便宜
+
+想进的 👉 加我微信 **hao_dev**（备注「入群」），我拉你进群：
+
+<table>
+  <tr>
+    <td align="center">
+      <strong>微信：hao_dev</strong><br>
+      <img src="https://cdn.jsdelivr.net/gh/eternityspring/article-tools@main/images/wechat-qr.png" alt="烁皓微信二维码" width="240">
+    </td>
+  </tr>
+</table>
+
 ## License
 
 [Apache License 2.0](./LICENSE)
