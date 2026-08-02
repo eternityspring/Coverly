@@ -1123,11 +1123,17 @@ textarea {
 /* ---------- properties panel ---------- */
 .props {
   width: 280px;
+  flex: none;
   background: var(--panel);
   border-left: 1px solid var(--border);
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
+  overflow: hidden; /* the section list scrolls, the panel itself does not */
+}
+.props-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 .props-head {
   padding: 14px 16px;
@@ -1705,8 +1711,9 @@ input[type='range'] {
 }
 /* margin-top:auto keeps it at the bottom when the panel is short, and lets it
    follow the content when the panel scrolls */
+/* stays put however long the section list gets */
 .props-footer {
-  margin-top: auto;
+  flex: none;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -1727,6 +1734,10 @@ input[type='range'] {
   font-size: 16px;
   text-decoration: none;
   cursor: pointer;
+}
+.pf-btn svg {
+  width: 16px;
+  height: 16px;
 }
 .pf-btn:hover {
   background: var(--accent-soft);

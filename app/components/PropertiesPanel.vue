@@ -7,6 +7,7 @@ import { ensureFont, ensureAllFonts } from '~/utils/fontLoader'
 const store = useEditorStore()
 const shortcutsOpen = ref(false)
 const REPO_URL = 'https://github.com/eternityspring/Coverly'
+const X_URL = 'https://x.com/eternityspring'
 const el = computed(() => store.selected)
 const isShape = computed(() => ['rect', 'ellipse', 'triangle'].includes(el.value?.type || ''))
 const isFlow = computed(() => store.artboard.layout === 'flow')
@@ -101,6 +102,8 @@ function ratioStyle(p: Preset) {
 
 <template>
   <aside v-if="store.rightPanelOpen" class="props">
+    <!-- only this scrolls, so the footer below never leaves the screen -->
+    <div class="props-scroll">
     <!-- ============ element selected ============ -->
     <template v-if="el">
       <div class="props-head">
@@ -439,6 +442,7 @@ function ratioStyle(p: Preset) {
       </div>
       <div class="empty-hint">选中一个元素即可编辑它。</div>
     </template>
+    </div>
 
     <!-- pinned to the bottom of the panel, whatever is selected -->
     <footer class="props-footer">
@@ -447,6 +451,12 @@ function ratioStyle(p: Preset) {
       </button>
       <a class="pf-btn" :href="REPO_URL" target="_blank" rel="noopener noreferrer" title="GitHub 项目主页">
         <Icon name="lucide:github" />
+      </a>
+      <!-- lucide ships the old bird, not the current mark, so the logo is inline -->
+      <a class="pf-btn" :href="X_URL" target="_blank" rel="noopener noreferrer" title="X · @eternityspring">
+        <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M18.9 2H22l-7.6 8.7L23 22h-6.8l-5.3-7-6.1 7H1.6l8.1-9.3L1 2h7l4.8 6.4L18.9 2Zm-2.4 18h1.9L7.6 4H5.6l10.9 16Z" />
+        </svg>
       </a>
     </footer>
 
