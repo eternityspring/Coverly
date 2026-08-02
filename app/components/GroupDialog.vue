@@ -54,7 +54,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
       </p>
 
       <figure class="gd-qr">
-        <img :src="QR_URL" alt="烁皓微信二维码" width="220" height="220" />
+        <img :src="QR_URL" alt="烁皓微信二维码" width="220" height="281" />
         <figcaption>微信：{{ WECHAT_ID }} · 备注「入群」</figcaption>
       </figure>
     </div>
@@ -148,8 +148,9 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
   text-align: center;
 }
 .gd-qr img {
+  /* the source is a 962×1231 portrait WeChat card — fixing both axes squashed it */
   width: 220px;
-  height: 220px;
+  height: auto;
   max-width: 100%;
   border: 1px solid var(--border);
   border-radius: 12px;
