@@ -65,8 +65,8 @@ export const templates = pgTable('templates', {
   elements: jsonb('elements').$type<TemplateElement[]>().notNull(),
   // Elements seeded into a page added after the first one; falls back to `elements`.
   pageSeed: jsonb('page_seed').$type<TemplateElement[]>(),
-  // 'public'  — everyone, signed in or not
-  // 'members' — only signed-in users
+  // Kept for a future members-only tier. Nothing reads it today: the picker
+  // serves every template to everyone, and sign-in is asked for at export.
   visibility: text('visibility').notNull().default('public'),
   sortOrder: integer('sort_order').notNull().default(0),
   createdAt: timestamp('created_at').notNull().defaultNow(),

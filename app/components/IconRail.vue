@@ -12,18 +12,20 @@ const TOOLS = [
 
 <template>
   <nav class="icon-rail">
-    <button
-      v-for="t in TOOLS"
-      :key="t.key"
-      class="rail-item"
-      :class="{ active: store.activeTool === t.key && store.leftPanelOpen }"
-      @click="store.setTool(t.key)"
-    >
-      <Icon :name="t.icon" />
-      <span>{{ t.label }}</span>
-    </button>
+    <!-- only the tools scroll; the account entry below stays put -->
+    <div class="rail-tools">
+      <button
+        v-for="t in TOOLS"
+        :key="t.key"
+        class="rail-item"
+        :class="{ active: store.activeTool === t.key && store.leftPanelOpen }"
+        @click="store.setTool(t.key)"
+      >
+        <Icon :name="t.icon" />
+        <span>{{ t.label }}</span>
+      </button>
+    </div>
 
-    <!-- pinned to the bottom of the rail -->
     <button
       class="rail-item rail-bottom"
       :class="{ active: store.activeTool === 'documents' && store.leftPanelOpen }"

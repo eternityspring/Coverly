@@ -13,7 +13,19 @@ const initial = computed(() => (user.value?.name || user.value?.email || '?').ch
 
 const { exportPNG, exportJSON } = useExport()
 
+// Everything up to this point is open — browsing templates, editing, saving
+// locally. Export is where an account is asked for, and only where the user
+// system exists at all: with no database configured there is nobody to sign in
+// as, so export stays open (see CLAUDE.md).
+const needsSignIn = computed(() => authEnabled && !isPending.value && !user.value)
+
+function goSignIn() {
+  exportOpen.value = false
+  navigateTo({ path: '/login', query: { redirect: '/' } })
+}
+
 async function onExportPNG() {
+  if (needsSignIn.value) return goSignIn()
   exportOpen.value = false
   exporting.value = true
   exportError.value = ''
@@ -27,6 +39,7 @@ async function onExportPNG() {
   }
 }
 function onExportJSON() {
+  if (needsSignIn.value) return goSignIn()
   exportOpen.value = false
   exportJSON()
 }
@@ -34,7 +47,7 @@ function onExportJSON() {
 async function signOut() {
   menuOpen.value = false
   await authClient.signOut()
-  window.location.reload() // drop the members-only templates from the picker
+  window.location.reload()
 }
 
 function closeMenus() {
@@ -85,12 +98,16 @@ function importJSON(e: Event) {
       <div v-if="exportOpen" class="export-menu">
         <button class="ctx-item" @click="onExportPNG">
           <Icon name="lucide:image" /> 导出图片
-          <span class="ctx-key">PNG 2x</span>
+          <span class="ctx-key">{{ needsSignIn ? '需登录' : 'PNG 2x' }}</span>
         </button>
         <button class="ctx-item" @click="onExportJSON">
           <Icon name="lucide:file-json" /> 导出配置
-          <span class="ctx-key">JSON</span>
+          <span class="ctx-key">{{ needsSignIn ? '需登录' : 'JSON' }}</span>
         </button>
+        <template v-if="needsSignIn">
+          <div class="ctx-sep" />
+          <p class="export-note">登录后即可导出，编辑不受影响。</p>
+        </template>
       </div>
       <p v-if="exportError" class="export-error">{{ exportError }}</p>
     </div>

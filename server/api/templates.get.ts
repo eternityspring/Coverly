@@ -1,24 +1,20 @@
-import { inArray, asc } from 'drizzle-orm'
+import { asc } from 'drizzle-orm'
 import { useDb } from '~~/server/utils/db'
-import { getUser } from '~~/server/utils/session'
 import { templates } from '~~/server/db/schema'
 
 /**
- * Extra templates for the picker. Signed-in users additionally see the ones
- * marked `members`.
+ * Extra templates for the picker — every one of them, signed in or not. Browsing
+ * and editing are open; signing in is only asked for at export.
  *
  * Never fails the client: with no database — or a database that is down — this
  * returns an empty list, which the editor reads as "no extra templates" rather
  * than as an error (see CLAUDE.md).
  */
-export default defineEventHandler(async (event) => {
+export default defineEventHandler(async () => {
   const db = useDb()
   if (!db) return []
 
   try {
-    const user = await getUser(event)
-    const visible = user ? ['public', 'members'] : ['public']
-
     const rows = await db
       .select({
         id: templates.id,
@@ -30,7 +26,6 @@ export default defineEventHandler(async (event) => {
         pageSeed: templates.pageSeed,
       })
       .from(templates)
-      .where(inArray(templates.visibility, visible))
       .orderBy(asc(templates.sortOrder), asc(templates.createdAt))
 
     return rows.map((r) => ({ ...r, pageSeed: r.pageSeed ?? undefined }))

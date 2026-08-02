@@ -4,9 +4,9 @@
  * Usage: npm run db:seed
  *
  * Reads `app/data/templates.local.ts` — the git-ignored file used during local
- * development — and upserts every template into the database as `members`, i.e.
- * visible only to signed-in users. The blank canvas is deliberately not seeded:
- * it ships in the bundle so the editor still has a template with no database.
+ * development — and upserts every template into the database. The blank canvas
+ * is deliberately not seeded: it ships in the bundle so the editor still has a
+ * template with no database.
  */
 import postgres from 'postgres'
 
@@ -43,7 +43,7 @@ for (const [i, t] of list.entries()) {
       ${t.id}, ${t.name}, ${t.desc ?? ''}, ${t.kind ?? 'cover'},
       ${sql.json(t.artboard)}, ${sql.json(t.elements ?? [])},
       ${t.pageSeed ? sql.json(t.pageSeed) : null},
-      'members', ${i}
+      'public', ${i}
     )
     on conflict (id) do update set
       name = excluded.name,
@@ -52,6 +52,7 @@ for (const [i, t] of list.entries()) {
       artboard = excluded.artboard,
       elements = excluded.elements,
       page_seed = excluded.page_seed,
+      visibility = excluded.visibility,
       sort_order = excluded.sort_order,
       updated_at = now()
   `
@@ -59,4 +60,4 @@ for (const [i, t] of list.entries()) {
 }
 
 await sql.end()
-console.log(`\nDone — ${list.length} template(s) upserted as "members".`)
+console.log(`\nDone — ${list.length} template(s) upserted.`)

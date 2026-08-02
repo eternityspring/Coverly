@@ -365,9 +365,16 @@ textarea {
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  padding: 8px 0;
-  gap: 2px;
+  padding: 8px 0 0;
+  overflow: hidden; /* the tools scroll, the rail itself does not */
+}
+.rail-tools {
+  flex: 1;
+  min-height: 0;
   overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 .rail-item {
   border: none;
@@ -396,8 +403,13 @@ textarea {
   background: var(--accent-soft);
   color: var(--accent);
 }
+/* always reachable, whatever the rail's height */
 .rail-bottom {
-  margin-top: auto;
+  flex: none;
+  margin: 6px 8px 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 10px 10px;
 }
 .left-panel {
   width: 284px;
@@ -1482,6 +1494,13 @@ input[type='range'] {
   border-radius: 12px;
   box-shadow: var(--shadow);
   z-index: 40;
+}
+.export-note {
+  margin: 0;
+  padding: 4px 10px 6px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-dim);
 }
 .export-error {
   position: absolute;
