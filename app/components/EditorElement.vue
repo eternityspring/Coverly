@@ -128,20 +128,64 @@ function onContextMenu(e: MouseEvent) {
   store.openMenu(e.clientX, e.clientY, props.el.id)
 }
 
+// Snap distance in screen pixels — divided by zoom so it feels the same at any
+// magnification rather than getting stickier as you zoom in.
+const SNAP_PX = 6
+
+/** Nearest target within tolerance, as the offset needed to land on it. */
+function nearest(candidates: number[], targets: number[], tol: number) {
+  let best: { delta: number; at: number } | null = null
+  for (const c of candidates) {
+    for (const t of targets) {
+      const delta = t - c
+      if (Math.abs(delta) <= tol && (!best || Math.abs(delta) < Math.abs(best.delta))) {
+        best = { delta, at: t }
+      }
+    }
+  }
+  return best
+}
+
 function startDrag(e: PointerEvent) {
   store.beginInteraction()
   const sx = props.el.x
   const sy = props.el.y
   const mx = e.clientX
   const my = e.clientY
+
+  // Edges worth aligning to: the artboard's sides and centre, plus every other
+  // element's sides and centre. Computed once — they do not move during a drag.
+  const ab = store.artboard
+  const others = store.elements.filter((o) => o.id !== props.el.id)
+  const vTargets = [0, ab.width / 2, ab.width, ...others.flatMap((o) => [o.x, o.x + o.width / 2, o.x + o.width])]
+  const hTargets = [0, ab.height / 2, ab.height, ...others.flatMap((o) => [o.y, o.y + o.height / 2, o.y + o.height])]
+
   const move = (ev: PointerEvent) => {
     const dx = (ev.clientX - mx) / store.zoom
     const dy = (ev.clientY - my) / store.zoom
-    store.updateElement(props.el.id, { x: Math.round(sx + dx), y: Math.round(sy + dy) })
+    let x = sx + dx
+    let y = sy + dy
+
+    // Holding Alt drags freely, for when a snap is in the way.
+    if (ev.altKey) {
+      store.guides = { v: [], h: [] }
+    } else {
+      const tol = SNAP_PX / store.zoom
+      const w = props.el.width
+      const h = props.el.height
+      const sv = nearest([x, x + w / 2, x + w], vTargets, tol)
+      const sh = nearest([y, y + h / 2, y + h], hTargets, tol)
+      if (sv) x += sv.delta
+      if (sh) y += sh.delta
+      store.guides = { v: sv ? [sv.at] : [], h: sh ? [sh.at] : [] }
+    }
+
+    store.updateElement(props.el.id, { x: Math.round(x), y: Math.round(y) })
   }
   const up = () => {
     window.removeEventListener('pointermove', move)
     window.removeEventListener('pointerup', up)
+    store.guides = { v: [], h: [] }
     store.commitInteraction()
   }
   window.addEventListener('pointermove', move)

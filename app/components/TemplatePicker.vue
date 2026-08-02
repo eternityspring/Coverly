@@ -45,6 +45,7 @@ function miniEl(el: any) {
       fontWeight: el.fontWeight,
       textAlign: el.textAlign,
       lineHeight: String(el.lineHeight ?? 1.3),
+      whiteSpace: 'pre-wrap',
       display: 'flex',
       flexDirection: 'column',
       justifyContent: 'center',
@@ -83,6 +84,7 @@ function miniFlowText(el: any) {
     fontWeight: el.fontWeight,
     textAlign: el.textAlign,
     lineHeight: String(el.lineHeight ?? 1.6),
+    whiteSpace: 'pre-wrap',
     width: '100%',
     overflow: 'hidden',
   } as Record<string, string>

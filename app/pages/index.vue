@@ -54,6 +54,12 @@ function onKey(e: KeyboardEvent) {
     if (id) store.sendBackward(id)
     return
   }
+  // Shift+R, not ⌘R — that is the browser's reload and worth leaving alone.
+  if (e.shiftKey && !meta && k === 'r') {
+    e.preventDefault()
+    store.rulersOn = !store.rulersOn
+    return
+  }
   if (e.key === 'Escape') {
     store.deselectAll()
     return

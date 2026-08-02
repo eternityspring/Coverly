@@ -37,6 +37,9 @@ export const useEditorStore = defineStore('editor', () => {
   const activeTool = ref<'template' | 'asset' | 'text' | 'image' | 'background' | 'documents'>('text')
   const leftPanelOpen = ref(true)
   const rightPanelOpen = ref(true)
+  const rulersOn = ref(false)
+  // artboard-space coordinates of the alignment guides shown during a drag
+  const guides = ref<{ v: number[]; h: number[] }>({ v: [], h: [] })
   // right-click menu — `at` is the artboard-local point the menu was opened at
   const menu = ref<{ open: boolean; x: number; y: number; targetId: string | null; at: { x: number; y: number } | null }>({
     open: false,
@@ -514,6 +517,8 @@ export const useEditorStore = defineStore('editor', () => {
     activeTool,
     leftPanelOpen,
     rightPanelOpen,
+    rulersOn,
+    guides,
     setTool,
     applyTemplate,
     toJSON,
