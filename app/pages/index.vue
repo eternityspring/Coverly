@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { onMounted, onBeforeUnmount, watch } from 'vue'
+import { ensureDocumentFonts } from '~/utils/fontLoader'
 
 const store = useEditorStore()
 const templateStore = useTemplateStore()
 const { user } = useUser()
 useAgentImageImport()
 useLocalAutosave()
+const { fitToView } = useFitToView()
 
 function isTyping() {
   const a = document.activeElement as HTMLElement | null
@@ -81,6 +83,26 @@ onMounted(() => {
   templateStore.load()
 })
 onBeforeUnmount(() => window.removeEventListener('keydown', onKey))
+
+// Fetch whatever fonts the document uses. Keyed on the set of families rather
+// than on the pages themselves, so ordinary edits do not re-trigger it. Runs
+// before the fit below, whose measurement waits on document.fonts.ready.
+watch(
+  () => store.pages.flatMap((p) => p.elements.map((e) => e.fontFamily || '')).join('|'),
+  () => ensureDocumentFonts(store.pages),
+  { immediate: true },
+)
+
+// A document arriving — picked from a template, restored on refresh, switched to
+// from the shelf, or imported — gets fitted to the canvas area once it has
+// rendered. The store's estimate ran before layout existed; this replaces it.
+watch(
+  () => store.docId,
+  (id) => {
+    if (id) fitToView()
+  },
+  { immediate: true },
+)
 
 // Signing in or out changes which templates are visible. Nothing waits on this —
 // the picker already has the local ones.

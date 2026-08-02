@@ -18,7 +18,8 @@ export interface Page {
 }
 
 function defaultArtboard(): Artboard {
-  return { width: 1080, height: 1080, background: '#ffffff', layout: 'free' }
+  // same as the blank free template — a 公众号 cover
+  return { width: 1200, height: 510, background: '#ffffff', layout: 'free' }
 }
 
 export const useEditorStore = defineStore('editor', () => {
@@ -35,6 +36,7 @@ export const useEditorStore = defineStore('editor', () => {
   const docId = ref<string | null>(null)
   const activeTool = ref<'template' | 'asset' | 'text' | 'image' | 'background' | 'documents'>('text')
   const leftPanelOpen = ref(true)
+  const rightPanelOpen = ref(true)
   // right-click menu — `at` is the artboard-local point the menu was opened at
   const menu = ref<{ open: boolean; x: number; y: number; targetId: string | null; at: { x: number; y: number } | null }>({
     open: false,
@@ -386,10 +388,6 @@ export const useEditorStore = defineStore('editor', () => {
     name.value = tpl.name || 'Untitled design'
     activate(makePage(tpl))
   }
-  function startBlank() {
-    name.value = 'Untitled design'
-    activate(makePage())
-  }
   function openPicker() {
     pickerOpen.value = true
   }
@@ -406,15 +404,18 @@ export const useEditorStore = defineStore('editor', () => {
       leftPanelOpen.value = true
     }
   }
-  // replace the CURRENT page's artboard + elements with a template
+  // Apply a template inside the CURRENT document. With a page selected it
+  // replaces that page; with nothing selected it adds the template as a new page
+  // after the active one — so picking a template never destroys work by surprise.
   function applyTemplate(tpl: { id?: string; artboard?: Artboard; elements?: Array<Partial2 & { type: ElementType }> }) {
-    const i = pages.value.findIndex((p) => p.id === activeId.value)
-    if (i < 0) return
     snapshot()
     const page = makePage(tpl)
-    pages.value.splice(i, 1, page)
+    const i = pages.value.findIndex((p) => p.id === activeId.value)
+    if (pageSelected.value && i >= 0) pages.value.splice(i, 1, page)
+    else pages.value.splice(i + 1, 0, page)
     activeId.value = page.id
     selectedId.value = null
+    pageSelected.value = false
     zoom.value = fitZoom()
   }
 
@@ -508,11 +509,11 @@ export const useEditorStore = defineStore('editor', () => {
     removePage,
     movePage,
     loadTemplate,
-    startBlank,
     openPicker,
     closePicker,
     activeTool,
     leftPanelOpen,
+    rightPanelOpen,
     setTool,
     applyTemplate,
     toJSON,

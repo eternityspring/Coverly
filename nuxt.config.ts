@@ -12,11 +12,18 @@ export default defineNuxtConfig({
       title: 'Coverly — DOM-native Cover & Card Editor',
       meta: [{ name: 'viewport', content: 'width=device-width, initial-scale=1' }],
       link: [
+        // SVG first for browsers that support it; the .ico is the fallback and
+        // is also what shows up in bookmark bars and older browsers.
+        { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+        { rel: 'icon', type: 'image/x-icon', href: '/favicon.ico', sizes: '48x48' },
+        { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
         { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
         {
+          // Only the UI typeface loads up front. Design fonts are fetched when a
+          // document uses one or the font picker is opened — see utils/fontLoader.
           rel: 'stylesheet',
-          href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=Noto+Serif+SC:wght@400;600;700;900&family=Poppins:wght@400;600;800&family=Playfair+Display:wght@500;700;900&family=Bebas+Neue&family=Pacifico&family=Roboto+Mono:wght@400;700&display=swap',
+          href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap',
         },
       ],
     },

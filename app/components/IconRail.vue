@@ -29,7 +29,7 @@ const TOOLS = [
       :class="{ active: store.activeTool === 'documents' && store.leftPanelOpen }"
       @click="store.setTool('documents')"
     >
-      <Icon name="lucide:circle-user" />
+      <Icon name="lucide:user" />
       <span>我的</span>
     </button>
   </nav>

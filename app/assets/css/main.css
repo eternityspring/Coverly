@@ -6,9 +6,9 @@
   --border-strong: #d6d8df;
   --text: #1f2330;
   --text-dim: #6b7080;
-  --accent: #6c5ce7;
-  --accent-2: #8b7bf0;
-  --accent-soft: #efeafd;
+  --accent: #2563eb;
+  --accent-2: #3b82f6;
+  --accent-soft: #e8f1fe;
   --danger: #e74c6f;
   --shadow: 0 1px 3px rgba(20, 20, 40, 0.08), 0 8px 24px rgba(20, 20, 40, 0.06);
   --radius: 10px;
@@ -76,7 +76,7 @@ textarea {
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: linear-gradient(135deg, var(--accent), #c86bf0);
+  background: linear-gradient(135deg, var(--accent), #38bdf8);
   display: grid;
   place-items: center;
   color: #fff;
@@ -162,7 +162,7 @@ textarea {
   color: #fff;
 }
 .btn.primary:hover {
-  background: #5a4bd6;
+  background: #1d4ed8;
 }
 
 /* ---------- left add panel ---------- */
@@ -385,7 +385,8 @@ textarea {
   transition: all 0.12s;
 }
 .rail-item svg {
-  font-size: 22px;
+  width: 20px;
+  height: 20px;
 }
 .rail-item:hover {
   background: var(--panel-2);
@@ -452,12 +453,12 @@ textarea {
   background: var(--accent-soft);
 }
 .layer-row .l-icon {
-  width: 24px;
-  height: 24px;
+  width: 26px;
+  height: 26px;
   display: grid;
   place-items: center;
   color: var(--text-dim);
-  font-size: 16px;
+  font-size: 17px;
   flex: none;
 }
 .layer-row.active .l-icon {
@@ -807,7 +808,8 @@ textarea {
   font-weight: 600;
 }
 .lp-shape svg {
-  font-size: 26px;
+  width: 24px;
+  height: 24px;
 }
 .lp-shape span {
   color: var(--text);
@@ -854,7 +856,8 @@ textarea {
   cursor: pointer;
 }
 .lp-upload svg {
-  font-size: 26px;
+  width: 24px;
+  height: 24px;
   color: var(--accent);
 }
 .lp-upload:hover {
@@ -897,6 +900,34 @@ textarea {
   cursor: pointer;
   padding: 3px;
 }
+/* segmented filter inside the left panel (template layouts) */
+.lp-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  margin-bottom: 10px;
+  background: var(--bg);
+  border-radius: 10px;
+}
+.lp-tab {
+  flex: 1;
+  border: none;
+  background: transparent;
+  color: var(--text-dim);
+  height: 28px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.lp-tab:hover {
+  color: var(--text);
+}
+.lp-tab.active {
+  background: var(--panel);
+  color: var(--accent);
+  box-shadow: 0 1px 3px rgba(20, 20, 40, 0.1);
+}
+
 /* ---------- my documents (local shelf) ---------- */
 .lp-empty {
   padding: 20px 4px;
@@ -1100,6 +1131,35 @@ textarea {
   font-weight: 700;
   text-transform: capitalize;
 }
+.props-close {
+  color: var(--text-dim);
+}
+.props-close:hover {
+  color: var(--text);
+}
+/* the panel is gone, so this rides the viewport edge rather than the layout */
+.props-reopen {
+  position: fixed;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 18;
+  width: 26px;
+  height: 56px;
+  border: 1px solid var(--border);
+  border-right: none;
+  border-radius: 10px 0 0 10px;
+  background: var(--panel);
+  color: var(--text-dim);
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+  box-shadow: -2px 0 10px rgba(20, 20, 40, 0.06);
+}
+.props-reopen:hover {
+  color: var(--accent);
+  border-color: var(--accent);
+}
 .section {
   padding: 14px 16px;
   border-bottom: 1px solid var(--border);
@@ -1231,7 +1291,7 @@ input[type='range'] {
   inset: 0;
   outline: 2px dashed var(--accent);
   outline-offset: 2px;
-  background: rgba(108, 92, 231, 0.06);
+  background: rgba(37, 99, 235, 0.06);
   pointer-events: none;
 }
 .flow-board.dropping {
@@ -1272,7 +1332,7 @@ input[type='range'] {
   width: 28px;
   height: 28px;
   border-radius: 8px;
-  background: linear-gradient(135deg, var(--accent), #c86bf0);
+  background: linear-gradient(135deg, var(--accent), #38bdf8);
   display: grid;
   place-items: center;
   color: #fff;
@@ -1460,7 +1520,7 @@ input[type='range'] {
   border-radius: 50%;
   object-fit: cover;
   flex: none;
-  background: linear-gradient(135deg, var(--accent), #c86bf0);
+  background: linear-gradient(135deg, var(--accent), #38bdf8);
   color: #fff;
   display: grid;
   place-items: center;
@@ -1612,7 +1672,7 @@ input[type='range'] {
 }
 .ratio.active .ratio-box i {
   border-color: var(--accent);
-  background: rgba(108, 92, 231, 0.12);
+  background: rgba(37, 99, 235, 0.12);
 }
 .ratio.active .ratio-name {
   color: var(--accent);
@@ -1630,6 +1690,7 @@ input[type='range'] {
   margin-top: auto;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
   gap: 4px;
   padding: 8px 12px;
   border-top: 1px solid var(--border);

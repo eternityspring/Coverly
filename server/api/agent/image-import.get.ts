@@ -10,5 +10,6 @@ export default defineEventHandler((event) => {
   const query = getQuery(event)
   const id = typeof query.id === 'string' ? query.id : ''
   if (id) return { id, status: getAgentImageImportStatus(id) }
-  return { item: claimAgentImageImport() }
+  const clientId = typeof query.clientId === 'string' ? query.clientId : ''
+  return { item: claimAgentImageImport(clientId) }
 })

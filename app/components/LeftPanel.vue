@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, computed, watch } from 'vue'
 import type { ElementType, EditorElement } from '~/types/editor'
 
 const store = useEditorStore()
@@ -69,6 +70,21 @@ const GRADIENTS = [
   'linear-gradient(135deg, #ea580c 0%, #f97316 50%, #fbd38d 100%)',
   'linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e1b4b 100%)',
 ]
+
+// Template list, split by layout. It follows the page you are on — editing a
+// card should show card templates first — but you can switch freely.
+const pageLayout = computed<'free' | 'flow'>(() => (store.artboard.layout === 'flow' ? 'flow' : 'free'))
+const tplTab = ref<'free' | 'flow'>(pageLayout.value)
+watch(pageLayout, (l) => (tplTab.value = l))
+
+const TPL_TABS = [
+  { key: 'free', label: '自由布局' },
+  { key: 'flow', label: '流式布局' },
+] as const
+
+const visibleTemplates = computed(() =>
+  templateStore.all.filter((t) => (t.artboard.layout === 'flow' ? 'flow' : 'free') === tplTab.value),
+)
 </script>
 
 <template>
@@ -77,13 +93,25 @@ const GRADIENTS = [
     <!-- 模板 -->
     <template v-if="store.activeTool === 'template'">
       <h2 class="lp-title">模板</h2>
-      <p class="lp-hint">点击应用到当前页</p>
+      <div class="lp-tabs">
+        <button
+          v-for="t in TPL_TABS"
+          :key="t.key"
+          class="lp-tab"
+          :class="{ active: tplTab === t.key }"
+          @click="tplTab = t.key"
+        >
+          {{ t.label }}
+        </button>
+      </div>
+      <p class="lp-hint">{{ store.pageSelected ? '已选中页 — 点击替换该页' : '未选中页 — 点击新增一页' }}</p>
       <div class="lp-tpl-grid">
-        <button v-for="t in templateStore.all" :key="t.id" class="lp-tpl" @click="store.applyTemplate(t)">
+        <button v-for="t in visibleTemplates" :key="t.id" class="lp-tpl" @click="store.applyTemplate(t)">
           <PageThumb :page="t" :w="96" :h="62" />
           <span>{{ t.name }}</span>
         </button>
       </div>
+      <p v-if="!visibleTemplates.length" class="lp-empty">该布局下暂无模板。</p>
     </template>
 
     <!-- 素材（形状） -->

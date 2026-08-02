@@ -1,8 +1,21 @@
 <script setup lang="ts">
+import { ref, computed } from 'vue'
+
 const store = useEditorStore()
 const templateStore = useTemplateStore()
 
-const THUMB_W = 260
+const TABS = [
+  { key: 'free', label: '自由布局', hint: '元素绝对定位，可任意拖拽、缩放、旋转 — 封面首选' },
+  { key: 'flow', label: '流式布局', hint: '内容垂直堆叠，高度随内容自适应 — 长文卡片首选' },
+] as const
+
+const tab = ref<'free' | 'flow'>('free')
+const activeHint = computed(() => TABS.find((t) => t.key === tab.value)!.hint)
+const visible = computed(() =>
+  templateStore.all.filter((t) => (t.artboard.layout === 'flow' ? 'flow' : 'free') === tab.value),
+)
+
+const THUMB_W = 240
 function miniStage(width: number) {
   const scale = THUMB_W / width
   return {
@@ -81,20 +94,29 @@ function miniFlowText(el: any) {
     <div class="picker">
       <header class="picker-head">
         <h1>新建文档</h1>
-        <p>选一个模板开始 — 所有元素都能拖拽、缩放、旋转、双击改字。当前文档会自动保存在本地。</p>
+        <p>选一个模板开始，当前文档会自动保存在本地。</p>
       </header>
 
-      <div class="tpl-grid">
-        <button class="tpl-card" @click="store.startBlank()">
-          <div class="tpl-thumb blank"><Icon name="lucide:plus" /></div>
-          <div class="tpl-info">
-            <strong>空白画布</strong>
-            <em>1080 × 1080 · 从零开始</em>
-          </div>
+      <div class="picker-tabs" role="tablist">
+        <button
+          v-for="t in TABS"
+          :key="t.key"
+          class="picker-tab"
+          :class="{ active: tab === t.key }"
+          role="tab"
+          :aria-selected="tab === t.key"
+          @click="tab = t.key"
+        >
+          {{ t.label }}
         </button>
+      </div>
+      <p class="picker-hint">{{ activeHint }}</p>
 
-        <button v-for="t in templateStore.all" :key="t.id" class="tpl-card" @click="store.loadTemplate(t)">
-          <div class="tpl-thumb" :style="{ background: t.artboard.background }">
+      <div class="tpl-grid">
+        <button v-for="t in visible" :key="t.id" class="tpl-card" @click="store.loadTemplate(t)">
+          <!-- an empty template is a "start from scratch" card, not a blank preview -->
+          <div v-if="!t.elements.length" class="tpl-thumb blank"><Icon name="lucide:plus" /></div>
+          <div v-else class="tpl-thumb" :style="{ background: t.artboard.background }">
             <div v-if="t.artboard.layout === 'flow'" :style="miniFlowStage(t)">
               <template v-for="(el, i) in t.elements" :key="i">
                 <div v-if="el.type === 'text'" :style="miniFlowText(el)">{{ el.text }}</div>
@@ -138,7 +160,8 @@ function miniFlowText(el: any) {
 }
 .picker {
   width: 100%;
-  max-width: 760px;
+  /* wide enough for four cards; the grid below falls back on its own */
+  max-width: min(1280px, 94vw);
   max-height: 86vh;
   overflow: auto;
   background: #fff;
@@ -153,13 +176,45 @@ function miniFlowText(el: any) {
   letter-spacing: -0.02em;
 }
 .picker-head p {
-  margin: 0 0 22px;
+  margin: 0 0 18px;
   color: #6b7080;
   font-size: 14px;
 }
+.picker-tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  background: #f1f2f6;
+  border-radius: 10px;
+}
+.picker-tab {
+  border: none;
+  background: transparent;
+  color: #6b7080;
+  height: 30px;
+  padding: 0 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.picker-tab:hover {
+  color: #1f2330;
+}
+.picker-tab.active {
+  background: #fff;
+  color: #2563eb;
+  box-shadow: 0 1px 3px rgba(20, 20, 40, 0.1);
+}
+.picker-hint {
+  margin: 10px 0 18px;
+  font-size: 12px;
+  color: #8b90a0;
+}
 .tpl-grid {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  /* the column floor keeps each card wide enough for a full-size thumbnail;
+     narrower screens drop to three, two, then one column on their own */
+  grid-template-columns: repeat(auto-fill, minmax(272px, 1fr));
   gap: 18px;
 }
 .tpl-card {
@@ -171,15 +226,15 @@ function miniFlowText(el: any) {
   transition: all 0.14s;
 }
 .tpl-card:hover {
-  border-color: #6c5ce7;
-  box-shadow: 0 8px 26px rgba(108, 92, 231, 0.18);
+  border-color: #2563eb;
+  box-shadow: 0 8px 26px rgba(37, 99, 235, 0.18);
   transform: translateY(-2px);
 }
 .tpl-thumb {
   position: relative;
-  width: 260px;
+  width: 240px;
   max-width: 100%;
-  height: 104px;
+  height: 96px;
   border-radius: 9px;
   overflow: hidden;
   margin: 0 auto 12px;

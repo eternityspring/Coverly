@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { EditorElement } from '~/types/editor'
+import { FONTS, FONT_GROUPS } from '~/data/fonts'
+import { ensureFont, ensureAllFonts } from '~/utils/fontLoader'
 
 const store = useEditorStore()
 const shortcutsOpen = ref(false)
@@ -9,27 +11,33 @@ const el = computed(() => store.selected)
 const isShape = computed(() => ['rect', 'ellipse', 'triangle'].includes(el.value?.type || ''))
 const isFlow = computed(() => store.artboard.layout === 'flow')
 
-const FONTS = [
-  'Noto Serif SC',
-  'Inter',
-  'Poppins',
-  'Playfair Display',
-  'Bebas Neue',
-  'Pacifico',
-  'Roboto Mono',
-  'Georgia',
-  'Times New Roman',
-  'Arial',
-  'Courier New',
-  'Impact',
-]
+// Grouped so the picker can show 中文 / 书法 / 西文 / 系统 separately.
+const fontsByGroup = computed(() =>
+  FONT_GROUPS.map((g) => ({ group: g, items: FONTS.filter((f) => f.group === g) })),
+)
+
+function pickFont(family: string) {
+  ensureFont(family) // fetch it before it is applied, so the swap is immediate
+  begin()
+  set({ fontFamily: family })
+  commit()
+}
 const WEIGHTS = [
-  { v: 400, label: 'Regular' },
-  { v: 500, label: 'Medium' },
-  { v: 600, label: 'Semibold' },
-  { v: 700, label: 'Bold' },
-  { v: 900, label: 'Black' },
+  { v: 400, label: '常规' },
+  { v: 500, label: '中等' },
+  { v: 600, label: '半粗' },
+  { v: 700, label: '加粗' },
+  { v: 900, label: '特粗' },
 ]
+// Panel heading for a non-text element — otherwise it shows the raw type name.
+const TYPE_NAME: Record<string, string> = {
+  text: '文字编辑',
+  rect: '矩形',
+  ellipse: '圆形',
+  triangle: '三角形',
+  image: '图片',
+  divider: '分割线',
+}
 const SWATCHES = [
   '#111827', '#ffffff', '#e74c6f', '#f59e0b', '#22c55e', '#06b6d4',
   '#6c5ce7', '#8b7bf0', '#ec4899', '#0f172a', '#64748b', '#fde047',
@@ -41,7 +49,7 @@ const PRESETS = [
   { ratio: '9:16', name: '故事', w: 1080, h: 1920 },
   { ratio: '16:9', name: '横版', w: 1280, h: 720 },
   { ratio: '2.35:1', name: '公众号', w: 1200, h: 510 },
-  { ratio: 'A4', name: '文档', w: 794, h: 1123 },
+  { ratio: '5:2', name: 'X 文章', w: 1200, h: 480 },
 ]
 
 // interaction helpers -> grouped into single undo steps
@@ -92,14 +100,17 @@ function ratioStyle(p: Preset) {
 </script>
 
 <template>
-  <aside class="props">
+  <aside v-if="store.rightPanelOpen" class="props">
     <!-- ============ element selected ============ -->
     <template v-if="el">
       <div class="props-head">
-        <h2>{{ el.type === 'text' ? '文字编辑' : el.type }}</h2>
+        <h2>{{ TYPE_NAME[el.type] || '元素' }}</h2>
         <div style="display: flex; gap: 6px">
           <button class="icon-btn" title="复制 (⌘D)" @click="store.duplicate(el.id)"><Icon name="lucide:copy" /></button>
           <button class="icon-btn" title="删除 (⌫)" @click="store.removeElement(el.id)"><Icon name="lucide:trash-2" /></button>
+          <button class="icon-btn props-close" title="收起面板" @click="store.rightPanelOpen = false">
+            <Icon name="lucide:chevrons-right" />
+          </button>
         </div>
       </div>
 
@@ -109,8 +120,18 @@ function ratioStyle(p: Preset) {
         <div class="section">
           <div class="field">
             <label>字体</label>
-            <select :value="el.fontFamily" @focus="begin" @change="set({ fontFamily: ($event.target as HTMLSelectElement).value }); commit()">
-              <option v-for="f in FONTS" :key="f" :value="f" :style="{ fontFamily: f }">{{ f }}</option>
+            <!-- opening the list loads every catalogue font, so each row can preview
+                 itself — only the slices covering these few characters get fetched -->
+            <select
+              :value="el.fontFamily"
+              @focus="ensureAllFonts()"
+              @change="pickFont(($event.target as HTMLSelectElement).value)"
+            >
+              <optgroup v-for="g in fontsByGroup" :key="g.group" :label="g.group">
+                <option v-for="f in g.items" :key="f.family" :value="f.family" :style="{ fontFamily: f.family }">
+                  {{ f.label }}
+                </option>
+              </optgroup>
             </select>
           </div>
           <div class="field-row">
@@ -230,12 +251,12 @@ function ratioStyle(p: Preset) {
       <!-- ============ SHAPE / IMAGE ============ -->
       <template v-else>
         <div class="section">
-          <h3>Arrange</h3>
+          <h3>图层顺序</h3>
           <div class="grid-btns">
-            <button class="mini-btn" @click="store.bringToFront(el.id)"><Icon name="lucide:bring-to-front" /> To front</button>
-            <button class="mini-btn" @click="store.sendToBack(el.id)"><Icon name="lucide:send-to-back" /> To back</button>
-            <button class="mini-btn" @click="store.bringForward(el.id)"><Icon name="lucide:arrow-up" /> Forward</button>
-            <button class="mini-btn" @click="store.sendBackward(el.id)"><Icon name="lucide:arrow-down" /> Backward</button>
+            <button class="mini-btn" @click="store.bringToFront(el.id)"><Icon name="lucide:bring-to-front" /> 置顶</button>
+            <button class="mini-btn" @click="store.sendToBack(el.id)"><Icon name="lucide:send-to-back" /> 置底</button>
+            <button class="mini-btn" @click="store.bringForward(el.id)"><Icon name="lucide:arrow-up" /> 上移</button>
+            <button class="mini-btn" @click="store.sendBackward(el.id)"><Icon name="lucide:arrow-down" /> 下移</button>
           </div>
         </div>
 
@@ -258,7 +279,7 @@ function ratioStyle(p: Preset) {
         </div>
 
         <div v-if="!isFlow" class="section">
-          <h3>Position &amp; size</h3>
+          <h3>位置与尺寸</h3>
           <div class="field-row">
             <div class="field">
               <label>X</label>
@@ -279,12 +300,12 @@ function ratioStyle(p: Preset) {
               <input type="number" :value="Math.round(el.height)" @focus="begin" @blur="commit" @input="set({ height: Math.max(1, num($event)) })" />
             </div>
             <div class="field">
-              <label>Angle</label>
+              <label>旋转</label>
               <input type="number" :value="Math.round(el.rotation)" @focus="begin" @blur="commit" @input="set({ rotation: num($event) })" />
             </div>
           </div>
           <div class="field">
-            <label>Opacity · {{ Math.round(el.opacity * 100) }}%</label>
+            <label>透明度 · {{ Math.round(el.opacity * 100) }}%</label>
             <input type="range" min="0" max="1" step="0.01" :value="el.opacity" @pointerdown="begin" @input="set({ opacity: num($event) })" @change="commit" />
           </div>
           <div class="field">
@@ -301,7 +322,7 @@ function ratioStyle(p: Preset) {
         </div>
 
         <div v-if="isShape" class="section">
-          <h3>Fill</h3>
+          <h3>填充</h3>
           <div class="color-row">
             <input type="color" :value="el.fill" @focus="begin" @change="commit" @input="set({ fill: ($event.target as HTMLInputElement).value })" />
             <input class="hex" type="text" :value="el.fill" @focus="begin" @blur="commit" @input="set({ fill: ($event.target as HTMLInputElement).value })" />
@@ -312,31 +333,31 @@ function ratioStyle(p: Preset) {
         </div>
 
         <div v-if="el.type === 'image'" class="section">
-          <h3>Image</h3>
+          <h3>图片</h3>
           <div class="field">
-            <label>Fit</label>
+            <label>填充方式</label>
             <select :value="el.objectFit" @focus="begin" @change="set({ objectFit: ($event.target as HTMLSelectElement).value as any }); commit()">
-              <option value="cover">Cover</option>
-              <option value="contain">Contain</option>
-              <option value="fill">Stretch</option>
+              <option value="cover">裁剪填满</option>
+              <option value="contain">完整显示</option>
+              <option value="fill">拉伸变形</option>
             </select>
           </div>
         </div>
 
         <div v-if="isShape || el.type === 'image'" class="section">
-          <h3>Border &amp; corners</h3>
+          <h3>描边与圆角</h3>
           <div class="field-row">
             <div class="field">
-              <label>Border width</label>
+              <label>描边粗细</label>
               <input type="number" min="0" :value="el.borderWidth" @focus="begin" @blur="commit" @input="set({ borderWidth: Math.max(0, num($event)) })" />
             </div>
             <div class="field" style="max-width: 56px">
-              <label>Color</label>
+              <label>颜色</label>
               <input type="color" :value="el.borderColor" @focus="begin" @change="commit" @input="set({ borderColor: ($event.target as HTMLInputElement).value })" />
             </div>
           </div>
           <div v-if="el.type !== 'ellipse'" class="field">
-            <label>Corner radius · {{ el.radius }}px</label>
+            <label>圆角 · {{ el.radius }}px</label>
             <input type="range" min="0" max="200" step="1" :value="el.radius" @pointerdown="begin" @input="set({ radius: num($event) })" @change="commit" />
           </div>
         </div>
@@ -345,7 +366,12 @@ function ratioStyle(p: Preset) {
 
     <!-- ============ nothing selected: artboard ============ -->
     <template v-else>
-      <div class="props-head"><h2>Design</h2></div>
+      <div class="props-head">
+        <h2>画布</h2>
+        <button class="icon-btn props-close" title="收起面板" @click="store.rightPanelOpen = false">
+          <Icon name="lucide:chevrons-right" />
+        </button>
+      </div>
       <div class="section">
         <h3>布局模式</h3>
         <div class="layout-badge" :class="store.artboard.layout === 'flow' ? 'is-flow' : 'is-free'">
@@ -402,7 +428,7 @@ function ratioStyle(p: Preset) {
         </div>
       </div>
       <div class="section">
-        <h3>Background</h3>
+        <h3>背景</h3>
         <div class="color-row">
           <input type="color" :value="store.artboard.background" @input="store.setArtboard({ background: ($event.target as HTMLInputElement).value })" />
           <input class="hex" type="text" :value="store.artboard.background" @input="store.setArtboard({ background: ($event.target as HTMLInputElement).value })" />
@@ -426,4 +452,9 @@ function ratioStyle(p: Preset) {
 
     <ShortcutsDialog v-if="shortcutsOpen" @close="shortcutsOpen = false" />
   </aside>
+
+  <!-- collapsed: a tab on the right edge, vertically centred, to bring it back -->
+  <button v-else class="props-reopen" title="展开属性面板" @click="store.rightPanelOpen = true">
+    <Icon name="lucide:chevrons-left" />
+  </button>
 </template>

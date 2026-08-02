@@ -4,8 +4,10 @@ type ImageFit = 'cover' | 'contain' | 'fill'
 
 interface PendingImageImport {
   id: string
+  kind: 'image' | 'document'
   name: string
-  dataUrl: string
+  dataUrl?: string
+  document?: Record<string, unknown>
   placement?: {
     x?: number
     y?: number
@@ -28,8 +30,10 @@ export function useAgentImageImport() {
   const store = useEditorStore()
   let timer: ReturnType<typeof setInterval> | undefined
   let polling = false
+  let clientId = ''
 
   async function addImageLayer(item: PendingImageImport) {
+    if (!item.dataUrl) throw new Error('The imported image payload is missing.')
     const image = await loadImage(item.dataUrl)
     const artboard = store.artboard
     const requested = item.placement || {}
@@ -57,13 +61,38 @@ export function useAgentImageImport() {
     })
   }
 
+  function importLayeredDocument(item: PendingImageImport) {
+    if (!item.document) throw new Error('The layered document payload is missing.')
+    store.loadJSON(JSON.stringify(item.document))
+    store.closePicker()
+    const top = store.elements[store.elements.length - 1]
+    store.select(top?.id || null)
+  }
+
+  async function heartbeat() {
+    if (!clientId) return
+    await $fetch('/api/agent/editor-session', {
+      method: 'POST',
+      body: {
+        clientId,
+        documentName: store.name,
+        pageId: store.activeId,
+        visible: document.visibilityState === 'visible',
+        focused: document.hasFocus(),
+      },
+    })
+  }
+
   async function poll() {
-    if (polling) return
+    if (polling || !clientId) return
     polling = true
     try {
-      const response = await $fetch<{ item: PendingImageImport | null }>('/api/agent/image-import')
+      const response = await $fetch<{ item: PendingImageImport | null }>('/api/agent/image-import', {
+        query: { clientId },
+      })
       if (!response.item) return
-      await addImageLayer(response.item)
+      if (response.item.kind === 'document') importLayeredDocument(response.item)
+      else await addImageLayer(response.item)
       await $fetch('/api/agent/image-import', {
         method: 'DELETE',
         body: { id: response.item.id },
@@ -76,11 +105,28 @@ export function useAgentImageImport() {
     }
   }
 
+  async function tick() {
+    try {
+      await heartbeat()
+      await poll()
+    } catch (error) {
+      if (import.meta.dev) console.debug('[agent editor session]', error)
+    }
+  }
+
   onMounted(() => {
-    void poll()
-    timer = setInterval(poll, 1000)
+    clientId =
+      sessionStorage.getItem('coverly:agent-client-id') ||
+      `editor_${crypto.randomUUID?.() || Math.random().toString(36).slice(2)}`
+    sessionStorage.setItem('coverly:agent-client-id', clientId)
+    void tick()
+    timer = setInterval(tick, 1000)
+    window.addEventListener('focus', tick)
+    document.addEventListener('visibilitychange', tick)
   })
   onBeforeUnmount(() => {
     if (timer) clearInterval(timer)
+    window.removeEventListener('focus', tick)
+    document.removeEventListener('visibilitychange', tick)
   })
 }

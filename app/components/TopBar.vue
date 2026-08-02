@@ -72,9 +72,9 @@ function importJSON(e: Event) {
 
     <div class="spacer" />
 
-    <button class="btn" title="选择模板，新建一个文档" @click="store.openPicker()"><Icon name="lucide:layout-template" /> 模板</button>
-    <label class="btn" title="Import design JSON">
-      <Icon name="lucide:upload" /> Import
+    <button class="btn" title="选择模板，新建一个文档" @click="store.openPicker()"><Icon name="lucide:file-plus" /> 新建文档</button>
+    <label class="btn" title="从 JSON 配置导入文档">
+      <Icon name="lucide:upload" /> 导入
       <input type="file" accept="application/json,.json" hidden @change="importJSON" />
     </label>
     <div class="export" @pointerdown.stop>

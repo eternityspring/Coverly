@@ -14,17 +14,35 @@ export interface CoverTemplate {
   pageSeed?: Array<Partial<EditorElement> & { type: ElementType }>
 }
 
-// The open-source build ships with a single blank canvas.
+// The open-source build ships with one blank start per layout, so a fresh clone
+// can begin either kind of design without a database or any private templates.
 const BASE_TEMPLATES: CoverTemplate[] = [
   {
     id: 'blank',
     name: '空白画布',
-    desc: '封面 · 1080×1080 · 自由布局',
+    desc: '公众号封面 · 1200×510 · 自由布局',
     kind: 'cover',
     artboard: {
-      width: 1080,
-      height: 1080,
+      // 2.35:1 — matches the 公众号 preset in the canvas-size panel
+      width: 1200,
+      height: 510,
       layout: 'free',
+      background: '#ffffff',
+    },
+    elements: [],
+  },
+  {
+    id: 'blank-card',
+    name: '空白卡片',
+    desc: '小红书 · 480 宽 · 3:4 起，高度自适应',
+    kind: 'card',
+    artboard: {
+      width: 480,
+      height: 0, // ignored in flow — height comes from the content
+      layout: 'flow',
+      padding: 44,
+      gap: 16,
+      minHeight: 640, // 3:4 of the width; the card grows past it as content is added
       background: '#ffffff',
     },
     elements: [],

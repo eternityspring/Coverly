@@ -4,6 +4,8 @@ import { computed } from 'vue'
 const store = useEditorStore()
 const pct = computed(() => Math.round(store.zoom * 100) + '%')
 
+const { fitToView } = useFitToView()
+
 const STEPS = [0.1, 0.25, 0.5, 0.75, 1, 1.5, 2, 3]
 function onPick(e: Event) {
   const v = +(e.target as HTMLSelectElement).value
@@ -27,7 +29,9 @@ function onPick(e: Event) {
 
       <button class="bb-btn" title="放大" @click="store.zoomIn()"><Icon name="lucide:plus" /></button>
       <div class="bb-sep" />
-      <button class="bb-btn" title="适应屏幕" @click="store.zoomToFit()"><Icon name="lucide:maximize" /></button>
+      <button class="bb-btn" title="当前页自适应铺满画布区域" @click="fitToView">
+        <Icon name="lucide:scan" />
+      </button>
       <button class="bb-btn bb-wide" title="实际大小" @click="store.setZoom(1)">100%</button>
     </div>
   </div>

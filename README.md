@@ -73,4 +73,4 @@ rotated frame so it stays correct at any angle).
 
 ## License
 
-[MIT](./LICENSE)
+[Apache License 2.0](./LICENSE)

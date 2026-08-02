@@ -12,17 +12,30 @@ export interface AgentImagePlacement {
 
 export interface AgentImageImport {
   id: string
+  kind: 'image' | 'document'
   name: string
-  dataUrl: string
+  dataUrl?: string
+  document?: Record<string, unknown>
   placement?: AgentImagePlacement
+  targetClientId?: string
   status: 'queued' | 'claimed' | 'consumed'
   createdAt: number
   claimedAt?: number
   consumedAt?: number
 }
 
+export interface AgentEditorSession {
+  clientId: string
+  documentName: string
+  pageId: string
+  visible: boolean
+  focused: boolean
+  updatedAt: number
+}
+
 interface AgentImageImportStore {
   items: AgentImageImport[]
+  sessions: AgentEditorSession[]
 }
 
 const globalState = globalThis as typeof globalThis & {
@@ -31,12 +44,17 @@ const globalState = globalThis as typeof globalThis & {
 
 const store =
   globalState.__coverlyAgentImageImports ||
-  (globalState.__coverlyAgentImageImports = { items: [] })
+  (globalState.__coverlyAgentImageImports = { items: [], sessions: [] })
+
+// Upgrade the development global in place when HMR preserved an older store.
+store.sessions ||= []
 
 const MAX_IMAGE_BYTES = 24 * 1024 * 1024
 const MAX_PENDING = 8
 const CLAIM_TIMEOUT_MS = 15_000
 const RECORD_TTL_MS = 30 * 60_000
+const SESSION_TTL_MS = 8_000
+const ELEMENT_TYPES = new Set(['text', 'rect', 'ellipse', 'triangle', 'image', 'divider'])
 
 export function assertLoopbackRequest(event: H3Event) {
   const address = event.node.req.socket.remoteAddress || ''
@@ -62,6 +80,7 @@ export function assertLoopbackRequest(event: H3Event) {
 
 function prune(now = Date.now()) {
   store.items = store.items.filter((item) => now - item.createdAt < RECORD_TTL_MS)
+  store.sessions = store.sessions.filter((session) => now - session.updatedAt < SESSION_TTL_MS)
 }
 
 function cleanOptionalNumber(value: unknown, field: string, min?: number) {
@@ -116,6 +135,78 @@ function validateDataUrl(value: unknown) {
   return value
 }
 
+function validateLayeredDocument(value: unknown) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw createError({ statusCode: 400, statusMessage: 'document must be an object.' })
+  }
+  const document = value as Record<string, unknown>
+  const pages = document.pages
+  if (!Array.isArray(pages) || !pages.length || pages.length > 20) {
+    throw createError({ statusCode: 400, statusMessage: 'document.pages must contain 1 to 20 pages.' })
+  }
+
+  let elementCount = 0
+  for (const page of pages) {
+    if (!page || typeof page !== 'object' || Array.isArray(page)) {
+      throw createError({ statusCode: 400, statusMessage: 'Each page must be an object.' })
+    }
+    const rawPage = page as Record<string, unknown>
+    const artboard = rawPage.artboard as Record<string, unknown> | undefined
+    const width = artboard?.width
+    const height = artboard?.height
+    if (
+      typeof width !== 'number' ||
+      typeof height !== 'number' ||
+      !Number.isFinite(width) ||
+      !Number.isFinite(height) ||
+      width < 1 ||
+      height < 1 ||
+      width > 16_384 ||
+      height > 16_384
+    ) {
+      throw createError({ statusCode: 400, statusMessage: 'Each page needs finite artboard dimensions from 1 to 16384 pixels.' })
+    }
+
+    const elements = rawPage.elements
+    if (!Array.isArray(elements)) {
+      throw createError({ statusCode: 400, statusMessage: 'Each page.elements must be an array.' })
+    }
+    elementCount += elements.length
+    if (elementCount > 250) {
+      throw createError({ statusCode: 400, statusMessage: 'A layered import supports at most 250 elements.' })
+    }
+
+    for (const element of elements) {
+      if (!element || typeof element !== 'object' || Array.isArray(element)) {
+        throw createError({ statusCode: 400, statusMessage: 'Each element must be an object.' })
+      }
+      const raw = element as Record<string, unknown>
+      if (typeof raw.type !== 'string' || !ELEMENT_TYPES.has(raw.type)) {
+        throw createError({ statusCode: 400, statusMessage: 'An element has an unsupported type.' })
+      }
+      for (const field of ['x', 'y', 'width', 'height']) {
+        const number = raw[field]
+        if (typeof number !== 'number' || !Number.isFinite(number) || ((field === 'width' || field === 'height') && number < 1)) {
+          throw createError({ statusCode: 400, statusMessage: `Element ${field} must be a valid number.` })
+        }
+      }
+      if (raw.type === 'image') validateDataUrl(raw.src)
+      if (raw.type === 'text' && typeof raw.text !== 'string') {
+        throw createError({ statusCode: 400, statusMessage: 'Text elements require a text string.' })
+      }
+    }
+  }
+  return document
+}
+
+function cleanName(value: unknown, fallback: string) {
+  return (
+    (typeof value === 'string'
+      ? value.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 120)
+      : '') || fallback
+  )
+}
+
 export function enqueueAgentImageImport(payload: Record<string, unknown>) {
   prune()
   const pending = store.items.filter((item) => item.status !== 'consumed').length
@@ -123,15 +214,20 @@ export function enqueueAgentImageImport(payload: Record<string, unknown>) {
     throw createError({ statusCode: 429, statusMessage: 'The Coverly image import queue is full.' })
   }
 
-  const name =
-    (typeof payload.name === 'string'
-      ? payload.name.replace(/[\u0000-\u001f\u007f]/g, '').trim().slice(0, 120)
-      : '') || 'AI generated image'
+  const document = payload.document === undefined ? undefined : validateLayeredDocument(payload.document)
+  const targetClientId =
+    typeof payload.targetClientId === 'string' && payload.targetClientId.trim()
+      ? payload.targetClientId.trim().slice(0, 128)
+      : undefined
+  const name = cleanName(payload.name, document ? 'Layered Coverly design' : 'AI generated image')
   const item: AgentImageImport = {
     id: `img_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 9)}`,
+    kind: document ? 'document' : 'image',
     name,
-    dataUrl: validateDataUrl(payload.dataUrl),
-    placement: cleanPlacement(payload.placement),
+    dataUrl: document ? undefined : validateDataUrl(payload.dataUrl),
+    document,
+    placement: document ? undefined : cleanPlacement(payload.placement),
+    targetClientId,
     status: 'queued',
     createdAt: Date.now(),
   }
@@ -139,13 +235,14 @@ export function enqueueAgentImageImport(payload: Record<string, unknown>) {
   return item
 }
 
-export function claimAgentImageImport() {
+export function claimAgentImageImport(clientId = '') {
   const now = Date.now()
   prune(now)
   const item = store.items.find(
     (candidate) =>
-      candidate.status === 'queued' ||
-      (candidate.status === 'claimed' && now - (candidate.claimedAt || 0) >= CLAIM_TIMEOUT_MS),
+      (!candidate.targetClientId || candidate.targetClientId === clientId) &&
+      (candidate.status === 'queued' ||
+        (candidate.status === 'claimed' && now - (candidate.claimedAt || 0) >= CLAIM_TIMEOUT_MS)),
   )
   if (!item) return null
   item.status = 'claimed'
@@ -159,11 +256,35 @@ export function consumeAgentImageImport(id: string) {
   if (!item) return false
   item.status = 'consumed'
   item.consumedAt = Date.now()
-  item.dataUrl = ''
+  item.dataUrl = undefined
+  item.document = undefined
   return true
 }
 
 export function getAgentImageImportStatus(id: string) {
   prune()
   return store.items.find((candidate) => candidate.id === id)?.status || 'missing'
+}
+
+export function registerAgentEditorSession(payload: Record<string, unknown>) {
+  prune()
+  const clientId = typeof payload.clientId === 'string' ? payload.clientId.trim().slice(0, 128) : ''
+  if (!clientId) throw createError({ statusCode: 400, statusMessage: 'clientId is required.' })
+  const session: AgentEditorSession = {
+    clientId,
+    documentName: cleanName(payload.documentName, 'Untitled design'),
+    pageId: typeof payload.pageId === 'string' ? payload.pageId.slice(0, 128) : '',
+    visible: payload.visible === true,
+    focused: payload.focused === true,
+    updatedAt: Date.now(),
+  }
+  const index = store.sessions.findIndex((candidate) => candidate.clientId === clientId)
+  if (index >= 0) store.sessions[index] = session
+  else store.sessions.push(session)
+  return session
+}
+
+export function listAgentEditorSessions() {
+  prune()
+  return [...store.sessions].sort((a, b) => b.updatedAt - a.updatedAt)
 }
