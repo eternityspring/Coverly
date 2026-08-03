@@ -31,23 +31,6 @@ const flowBoardStyle = computed(() => ({
   zoom: String(store.zoom),
 }))
 
-// Rulers read the artboard's own coordinates. The tick step is chosen so labels
-// stay ~60px apart on screen, which means it changes as you zoom.
-const RULER = 20
-const STEPS = [10, 20, 25, 50, 100, 200, 250, 500, 1000, 2000]
-const showRulers = computed(() => store.rulersOn && isActive.value && !isFlow.value)
-const tickStep = computed(() => STEPS.find((s) => s * store.zoom >= 60) ?? STEPS[STEPS.length - 1])
-const ticksX = computed(() => {
-  const out: number[] = []
-  for (let v = 0; v <= props.page.artboard.width; v += tickStep.value) out.push(v)
-  return out
-})
-const ticksY = computed(() => {
-  const out: number[] = []
-  for (let v = 0; v <= props.page.artboard.height; v += tickStep.value) out.push(v)
-  return out
-})
-
 function bgDown() {
   store.setActivePage(props.page.id) // selects this page's artboard
 }
@@ -195,27 +178,6 @@ function startPageResize(e: PointerEvent, h: { hx: number; hy: number }) {
     >
       <FlowBlock v-for="el in page.elements" :key="el.id" :el="el" />
     </div>
-
-    <!-- rulers, in artboard units (Shift+R) -->
-    <template v-if="showRulers">
-      <div class="ruler ruler-x">
-        <span
-          v-for="t in ticksX"
-          :key="'rx' + t"
-          class="ruler-tick"
-          :style="{ left: t * store.zoom + 'px' }"
-        >{{ t }}</span>
-      </div>
-      <div class="ruler ruler-y">
-        <span
-          v-for="t in ticksY"
-          :key="'ry' + t"
-          class="ruler-tick"
-          :style="{ top: t * store.zoom + 'px' }"
-        >{{ t }}</span>
-      </div>
-      <div class="ruler-corner" />
-    </template>
 
     <!-- resize handles (drag to change page size) -->
     <template v-if="showResize">

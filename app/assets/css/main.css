@@ -281,10 +281,25 @@ textarea {
   left: 0;
   right: 0;
 }
+/* rulers ride the canvas container's edges, not the page */
+.canvas-area {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+.canvas-area .stage {
+  flex: 1;
+  min-width: 0;
+}
+/* inset the scroll area so the page never hides beneath a ruler */
+.canvas-area.rulers .stage {
+  padding-top: 76px;
+  padding-left: 76px;
+}
 .ruler {
   position: absolute;
   background: var(--panel);
-  border: 1px solid var(--border);
   color: var(--text-dim);
   font-size: 9px;
   font-variant-numeric: tabular-nums;
@@ -293,36 +308,40 @@ textarea {
   overflow: hidden;
 }
 .ruler-x {
-  left: 0;
+  top: 0;
+  left: 20px;
   right: 0;
-  top: -21px;
   height: 20px;
+  border-bottom: 1px solid var(--border);
 }
 .ruler-y {
-  top: 0;
+  top: 20px;
+  left: 0;
   bottom: 0;
-  left: -21px;
   width: 20px;
+  border-right: 1px solid var(--border);
 }
 .ruler-corner {
   position: absolute;
-  left: -21px;
-  top: -21px;
+  top: 0;
+  left: 0;
   width: 20px;
   height: 20px;
   background: var(--panel-2);
-  border: 1px solid var(--border);
-  z-index: 11;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  z-index: 12;
 }
 .ruler-tick {
   position: absolute;
   line-height: 1;
+  white-space: nowrap;
 }
 .ruler-x .ruler-tick {
-  top: 6px;
+  top: 5px;
   padding-left: 3px;
   border-left: 1px solid var(--border-strong);
-  height: 14px;
+  height: 15px;
 }
 .ruler-y .ruler-tick {
   left: 3px;
