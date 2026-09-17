@@ -57,6 +57,9 @@ const SESSION_TTL_MS = 8_000
 const ELEMENT_TYPES = new Set(['text', 'rect', 'ellipse', 'triangle', 'image', 'divider'])
 
 export function assertLoopbackRequest(event: H3Event) {
+  if (process.env.NODE_ENV === 'production') {
+    throw createError({ statusCode: 404, statusMessage: 'Not found' })
+  }
   const address = event.node.req.socket.remoteAddress || ''
   const hostname = getRequestURL(event).hostname
   const isLoopbackAddress =

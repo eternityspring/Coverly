@@ -12,6 +12,10 @@ const isSelected = computed(() => store.selectedId === props.el.id)
 const blockStyle = computed(() => ({
   marginTop: (props.el.marginTop || 0) + 'px',
   opacity: props.el.opacity ?? 1,
+  // A divider is a 1px line, so its block is a 1px pointer target. This grows
+  // the hit strip (see .divider-block::before) and counter-scales it against the
+  // board's zoom, so it stays the same size under the cursor at any zoom level.
+  '--hit-pad': props.el.type === 'divider' ? 6 / store.zoom + 'px' : undefined,
 }))
 const textStyle = computed(() => {
   const deco = [props.el.underline && 'underline', props.el.strikethrough && 'line-through'].filter(Boolean).join(' ')
@@ -101,7 +105,7 @@ function endEdit() {
 <template>
   <div
     class="flow-block"
-    :class="{ selected: isSelected, dragging: reordering }"
+    :class="{ selected: isSelected, dragging: reordering, 'divider-block': el.type === 'divider' }"
     :style="blockStyle"
     @pointerdown="onDown"
     @contextmenu.prevent.stop="onContextMenu"

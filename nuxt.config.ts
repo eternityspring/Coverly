@@ -2,7 +2,7 @@
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   ssr: false, // pure SPA — this is a client-side design editor
-  devtools: { enabled: true },
+  devtools: { enabled: process.env.NODE_ENV !== 'production' },
   devServer: { port: 3009 },
   modules: ['@pinia/nuxt', '@nuxt/icon'],
   icon: { mode: 'svg', size: '1em' },
@@ -11,6 +11,16 @@ export default defineNuxtConfig({
     head: {
       title: 'Coverly — DOM-native Cover & Card Editor',
       meta: [{ name: 'viewport', content: 'width=device-width, initial-scale=1' }],
+      // Keep development visits out of production analytics.
+      script: process.env.NODE_ENV === 'production' ? [{
+        id: 'microsoft-clarity',
+        type: 'text/javascript',
+        innerHTML: `(function(c,l,a,r,i,t,y){
+          c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+          t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+          y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "yjk948tl35");`,
+      }] : [],
       link: [
         // SVG first for browsers that support it; the .ico is the fallback and
         // is also what shows up in bookmark bars and older browsers.
@@ -39,7 +49,7 @@ export default defineNuxtConfig({
     },
   },
   nitro: {
-    preset: 'vercel',
+    preset: process.env.NITRO_PRESET || 'node-server',
   },
   vite: {
     optimizeDeps: {

@@ -11,7 +11,8 @@
     "postinstall": "nuxt prepare",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:seed": "node --env-file-if-exists=.env --experimental-strip-types scripts/seed-templates.ts"
+    "db:seed": "node --env-file-if-exists=.env --experimental-strip-types scripts/seed-templates.ts",
+    "test:admin": "node --experimental-strip-types --test tests/admin-policy.test.mjs"
   },
   "dependencies": {
     "@iconify-json/lucide": "^1.2.114",

@@ -1601,6 +1601,15 @@ input[type='range'] {
   font-size: 12px;
   color: var(--danger);
 }
+.export-ok {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  margin: 0;
+  white-space: nowrap;
+  font-size: 12px;
+  color: var(--accent);
+}
 
 /* ---------- top bar account ---------- */
 .account {
@@ -1910,6 +1919,18 @@ input[type='range'] {
   border: 0;
   border-top-style: solid;
   margin: 0;
+}
+/* A divider block is only as tall as its rule — a 1px pointer target, and less
+   than that once zoomed out. This grows the hit area into the surrounding gap
+   without touching the layout, so existing cards keep their exact spacing. */
+.divider-block::before {
+  content: '';
+  position: absolute;
+  inset: calc(-1 * var(--hit-pad, 6px)) 0;
+  border-radius: 4px;
+}
+.divider-block:hover::before {
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 .flow-img {
   display: block;

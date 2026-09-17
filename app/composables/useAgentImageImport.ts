@@ -27,6 +27,7 @@ function loadImage(src: string) {
 }
 
 export function useAgentImageImport() {
+  if (!import.meta.dev) return
   const store = useEditorStore()
   let timer: ReturnType<typeof setInterval> | undefined
   let polling = false

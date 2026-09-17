@@ -5,13 +5,16 @@ import { authClient } from '~/utils/auth-client'
 const store = useEditorStore()
 const { user, isPending, authEnabled } = useUser()
 
+const { isAdmin } = useAdmin()
+
 const menuOpen = ref(false)
 const exportOpen = ref(false)
 const exporting = ref(false)
 const exportError = ref('')
+const copied = ref(false)
 const initial = computed(() => (user.value?.name || user.value?.email || '?').charAt(0))
 
-const { exportPNG, exportJSON } = useExport()
+const { exportPNG, copyPNG, exportJSON } = useExport()
 
 // Everything up to this point is open — browsing templates, editing, saving
 // locally. Export is where an account is asked for, and only where the user
@@ -34,6 +37,22 @@ async function onExportPNG() {
   } catch (err) {
     console.error('[export] PNG failed', err)
     exportError.value = '导出图片失败，请重试'
+  } finally {
+    exporting.value = false
+  }
+}
+async function onCopyPNG() {
+  if (needsSignIn.value) return goSignIn()
+  exportOpen.value = false
+  exporting.value = true
+  exportError.value = ''
+  try {
+    await copyPNG()
+    copied.value = true
+    window.setTimeout(() => (copied.value = false), 1600)
+  } catch (err) {
+    console.error('[export] copy failed', err)
+    exportError.value = '复制图片失败，请重试'
   } finally {
     exporting.value = false
   }
@@ -100,6 +119,10 @@ function importJSON(e: Event) {
           <Icon name="lucide:image" /> 导出图片
           <span class="ctx-key">{{ needsSignIn ? '需登录' : 'PNG 2x' }}</span>
         </button>
+        <button class="ctx-item" @click="onCopyPNG">
+          <Icon name="lucide:copy" /> 复制图片
+          <span class="ctx-key">{{ needsSignIn ? '需登录' : '到剪贴板' }}</span>
+        </button>
         <button class="ctx-item" @click="onExportJSON">
           <Icon name="lucide:file-json" /> 导出配置
           <span class="ctx-key">{{ needsSignIn ? '需登录' : 'JSON' }}</span>
@@ -110,6 +133,7 @@ function importJSON(e: Event) {
         </template>
       </div>
       <p v-if="exportError" class="export-error">{{ exportError }}</p>
+      <p v-else-if="copied" class="export-ok">已复制到剪贴板</p>
     </div>
 
     <!-- Account — absent entirely when no database is configured -->
@@ -122,6 +146,7 @@ function importJSON(e: Event) {
         </button>
         <div v-if="menuOpen" class="account-menu">
           <div class="account-email">{{ user.email }}</div>
+          <NuxtLink v-if="isAdmin" to="/admin" class="ctx-item" @click="menuOpen = false"><Icon name="lucide:users" /> 用户管理</NuxtLink>
           <button class="ctx-item" @click="signOut"><Icon name="lucide:log-out" /> 退出登录</button>
         </div>
       </div>

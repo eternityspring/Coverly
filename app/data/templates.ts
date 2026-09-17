@@ -58,6 +58,6 @@ const localModules = import.meta.glob('./templates.local.ts', { eager: true }) a
   string,
   { LOCAL_TEMPLATES?: CoverTemplate[] }
 >
-const LOCAL_TEMPLATES = Object.values(localModules).flatMap((m) => m.LOCAL_TEMPLATES ?? [])
+const LOCAL_TEMPLATES = (import.meta.dev ? Object.values(localModules) : []).flatMap((m) => m.LOCAL_TEMPLATES ?? [])
 
 export const COVER_TEMPLATES: CoverTemplate[] = [...BASE_TEMPLATES, ...LOCAL_TEMPLATES]

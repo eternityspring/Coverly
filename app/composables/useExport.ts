@@ -26,7 +26,7 @@ function download(url: string, filename: string) {
 export function useExport() {
   const store = useEditorStore()
 
-  async function capture(render: typeof htmlToImage.toPng) {
+  async function capture<T>(render: (node: HTMLElement, options: object) => Promise<T>) {
     const view = document.querySelector('.page-view.active') as HTMLElement | null
     const board = view?.querySelector('.artboard, .flow-board') as HTMLElement | null
     if (!board) throw new Error('No page to export')
@@ -79,6 +79,20 @@ export function useExport() {
     download(url, `${fileBase(store.name)}${suffix}.png`)
   }
 
+  // Same capture, straight onto the clipboard instead of onto disk. Needs a
+  // secure context (https or localhost); browsers without it get an error the
+  // caller surfaces.
+  async function copyPNG() {
+    if (!navigator.clipboard?.write || typeof ClipboardItem === 'undefined') {
+      throw new Error('Clipboard image write unavailable')
+    }
+    store.deselectAll()
+    await nextTick()
+    const blob = await capture(htmlToImage.toBlob)
+    if (!blob) throw new Error('Capture produced no image')
+    await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })])
+  }
+
   function exportJSON() {
     const blob = new Blob([store.toJSON()], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
@@ -86,5 +100,5 @@ export function useExport() {
     URL.revokeObjectURL(url)
   }
 
-  return { exportPNG, exportJSON }
+  return { exportPNG, copyPNG, exportJSON }
 }
